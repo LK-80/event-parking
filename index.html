@@ -730,8 +730,12 @@
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <i class="fa-solid fa-list-check text-amber-500"></i> Registro Pass Emessi
+              <span id="conteggio-pass-registro" class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">0 Pass</span>
             </h3>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
+              <button onclick="aggiornaRegistroPassManuale()" class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                <i class="fa-solid fa-rotate"></i> Aggiorna
+              </button>
               <button onclick="esportaPassInCSV()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold">
                 <i class="fa-solid fa-file-csv"></i> Esporta CSV
               </button>
@@ -840,287 +844,21 @@
   </main>
 
   <!-- ======================================================== -->
-  <!-- FOOTER PERSISTENTE IN TUTTE LE SCHERMATE                 -->
+  <!-- MODAL: ANTEPRIMA IMMAGINE PNG PASS (FALLBACK SAFARI/IOS) -->
   <!-- ======================================================== -->
-  <footer class="mt-auto border-t border-gray-900 bg-gray-950/80 py-4 px-4 text-center">
-    <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500 font-medium tracking-wide">
-      <span>Designed by <strong class="text-amber-400 font-semibold tracking-wider">Luca Amati</strong></span>
-    </div>
-  </footer>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: LOGIN ACCESSO ADMIN (INTEGRATO IN-PAGE)          -->
-  <!-- ======================================================== -->
-  <div id="modal-login-admin" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-2xl font-bold">
-        <i class="fa-solid fa-sliders"></i>
-      </div>
-      <div>
-        <h3 class="text-lg font-black text-white uppercase tracking-wider">Accesso Amministrazione</h3>
-        <p class="text-xs text-gray-400 mt-1">Inserisci la password Admin (predefinita: <span class="font-mono text-amber-400 font-bold">12345</span>)</p>
-      </div>
-      <div>
-        <input id="input-login-admin-pwd" type="password" placeholder="•••••" maxlength="20" class="w-full text-center bg-gray-950 border-2 border-gray-700 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-amber-500 focus:outline-none">
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalLoginAdmin()" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaLoginAdminModal()" class="w-1/2 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black rounded-xl text-xs shadow-lg shadow-amber-500/20">ACCEDI ADMIN</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: LOGIN ACCESSO MENU BS (INTEGRATO IN-PAGE)        -->
-  <!-- ======================================================== -->
-  <div id="modal-login-bs" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-purple-500/40 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-purple-600/20 border border-purple-500/40 text-purple-400 flex items-center justify-center text-2xl font-bold">
-        <i class="fa-solid fa-shield-halved"></i>
-      </div>
-      <div>
-        <h3 class="text-lg font-black text-white uppercase tracking-wider">Accesso Riservato BS</h3>
-        <p class="text-xs text-gray-400 mt-1">Inserisci la password di sicurezza BS (predefinita: <span class="font-mono text-purple-400 font-bold">12345</span>)</p>
-      </div>
-      <div>
-        <input id="input-login-bs-pwd" type="password" placeholder="•••••" maxlength="20" class="w-full text-center bg-gray-950 border-2 border-purple-500/40 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-purple-400 focus:outline-none">
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalLoginBS()" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaLoginBSModal()" class="w-1/2 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-xl text-xs shadow-lg shadow-purple-600/20">ACCEDI BS</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: LOGIN ACCESSO VARCO (INTEGRATO IN-PAGE)          -->
-  <!-- ======================================================== -->
-  <div id="modal-login-varco" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-2xl font-bold">
-        <i class="fa-solid fa-door-open"></i>
-      </div>
-      <div>
-        <h3 class="text-lg font-black text-white uppercase tracking-wider">Accesso Postazione Varco</h3>
-        <p class="text-xs text-gray-400 mt-1">Digita il tuo PIN Personale operatore o la Password Master</p>
-      </div>
-      <div>
-        <input id="input-login-varco-pin" type="password" placeholder="PIN Operatore" maxlength="15" class="w-full text-center bg-gray-950 border-2 border-gray-700 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-amber-500 focus:outline-none">
-      </div>
-      <div class="flex flex-wrap justify-center gap-1.5 text-[11px] text-gray-500 pt-1">
-        <span>PIN rapidi test:</span>
-        <button onclick="document.getElementById('input-login-varco-pin').value='1101';confermaLoginVarcoModal();" class="text-amber-400 hover:underline font-mono">1101 (Luca)</button>
-        <span>•</span>
-        <button onclick="document.getElementById('input-login-varco-pin').value='1102';confermaLoginVarcoModal();" class="text-amber-400 hover:underline font-mono">1102 (Marco)</button>
-        <span>•</span>
-        <button onclick="document.getElementById('input-login-varco-pin').value='12345';confermaLoginVarcoModal();" class="text-amber-400 hover:underline font-mono">12345 (Master)</button>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalLoginVarco()" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaLoginVarcoModal()" class="w-1/2 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-black rounded-xl text-xs shadow-lg shadow-emerald-500/20">APRI VARCO</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: AGGIUNGI / MODIFICA PARCHEGGIO                    -->
-  <!-- ======================================================== -->
-  <div id="modal-parcheggio" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-          <i class="fa-solid fa-square-parking text-amber-500"></i> Configura Parcheggio
-        </h3>
-        <button onclick="chiudiModalParcheggio()" class="text-gray-400 hover:text-white">
+  <div id="modal-anteprima-png" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[250] hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-700 rounded-3xl p-5 max-w-sm w-full space-y-4 text-center shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+        <span class="text-xs font-black uppercase text-amber-400"><i class="fa-solid fa-image mr-1"></i> Immagine Pass PNG</span>
+        <button onclick="document.getElementById('modal-anteprima-png').classList.add('hidden')" class="text-gray-400 hover:text-white">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Nome Parcheggio *</label>
-          <input id="modal-p-nome" type="text" placeholder="Es: Fiera Rimini Nord" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Capienza Totale Posti Auto *</label>
-          <input id="modal-p-capienza" type="number" min="1" placeholder="Es: 400" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Indirizzo Stradale Completo *</label>
-          <input id="modal-p-indirizzo" type="text" placeholder="Es: Via Emilia 155, Rimini" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Coordinate GPS (Lat, Long)</label>
-          <input id="modal-p-coordinate" type="text" placeholder="Es: 44.0722,12.5255" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm font-mono">
-        </div>
+      <p class="text-[11px] text-gray-300">File scaricato! Su iPhone/iPad puoi anche tenere premuto sull'immagine qui sotto e scegliere <strong>"Salva immagine"</strong>:</p>
+      <div class="max-h-[60vh] overflow-y-auto rounded-2xl border border-gray-700 bg-gray-950 p-2">
+        <img id="img-anteprima-png-generata" src="" alt="Pass PNG" class="w-full h-auto rounded-xl mx-auto">
       </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalParcheggio()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="salvaNuovoParcheggioModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Salva Parcheggio</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: AGGIUNGI VARCO AL PARCHEGGIO                      -->
-  <!-- ======================================================== -->
-  <div id="modal-varco" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-          <i class="fa-solid fa-door-open text-amber-500"></i> Aggiungi Nuovo Varco
-        </h3>
-        <button onclick="chiudiModalVarco()" class="text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-      <input type="hidden" id="modal-v-parcheggio-id">
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Nome del Varco *</label>
-          <input id="modal-v-nome" type="text" placeholder="Es: Varco A, Varco B, Cancello Ovest" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Direzione / Funzione *</label>
-          <select id="modal-v-direzione" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-            <option value="ENTRATA">🟢 ENTRATA (Incrementa auto presenti / Scala posti)</option>
-            <option value="USCITA">🔴 USCITA (Veicolo esce / Libera posti residui)</option>
-          </select>
-        </div>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalVarco()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaAggiungiVarcoModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Aggiungi Varco</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: AGGIUNGI OPERATORE                               -->
-  <!-- ======================================================== -->
-  <div id="modal-operatore" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-          <i class="fa-solid fa-user-shield text-amber-500"></i> Nuovo Operatore di Controllo
-        </h3>
-        <button onclick="chiudiModalOperatore()" class="text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Nome Operatore *</label>
-          <input id="modal-op-nome" type="text" placeholder="Es: Luca, Marco, Matteo, Roberto" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">PIN Personale di Accesso (4-6 cifre) *</label>
-          <input id="modal-op-pin" type="text" placeholder="Es: 1101, 2202, 3303" maxlength="8" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white font-mono text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato *</label>
-          <select id="modal-op-parcheggio" onchange="aggiornaTendinaVarchiModalOperatore()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-            <!-- Popolato da JS -->
-          </select>
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Varco & Direzione Assegnata *</label>
-          <select id="modal-op-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-            <!-- Popolato da JS -->
-          </select>
-        </div>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalOperatore()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaSalvaOperatoreModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Crea Operatore</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: MODIFICA / RIASSEGNA VARCO OPERATORE DA ADMIN     -->
-  <!-- ======================================================== -->
-  <div id="modal-modifica-operatore" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-          <i class="fa-solid fa-arrows-rotate text-amber-500"></i> Riassegna Varco Operatore
-        </h3>
-        <button onclick="chiudiModalModificaOperatore()" class="text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-      <input type="hidden" id="modal-edit-op-id">
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Nome Operatore</label>
-          <input id="modal-edit-op-nome" type="text" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">PIN Personale</label>
-          <input id="modal-edit-op-pin" type="text" maxlength="8" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white font-mono text-sm">
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato</label>
-          <select id="modal-edit-op-parcheggio" onchange="aggiornaTendinaVarchiModalModifica()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-            <!-- Popolato da JS -->
-          </select>
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Assegna Varco & Funzione *</label>
-          <select id="modal-edit-op-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
-            <!-- Popolato da JS -->
-          </select>
-        </div>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalModificaOperatore()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaAggiornaOperatoreModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Salva Assegnazione</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- MODAL: CAMBIA PARCHEGGIO RAPIDO OPERATORE DA ADMIN       -->
-  <!-- ======================================================== -->
-  <div id="modal-cambia-parcheggio-op" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-          <i class="fa-solid fa-square-parking text-sky-400"></i> Sposta Operatore ad Altro Parcheggio
-        </h3>
-        <button onclick="chiudiModalCambiaParcheggioOp()" class="text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-      <input type="hidden" id="modal-cp-op-id">
-      <div class="space-y-3 text-xs">
-        <div class="bg-gray-950/70 border border-gray-800 p-3 rounded-xl flex items-center justify-between">
-          <div>
-            <span class="text-[10px] text-gray-500 uppercase font-bold block">Operatore Selezionato:</span>
-            <span id="modal-cp-op-nome-badge" class="font-extrabold text-sm text-white">Luca</span>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] text-gray-500 uppercase font-bold block">Parcheggio Attuale:</span>
-            <span id="modal-cp-op-park-attuale" class="text-xs text-amber-400 font-semibold">-</span>
-          </div>
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Seleziona Nuovo Parcheggio *</label>
-          <select id="modal-cp-nuovo-parcheggio" onchange="aggiornaTendinaVarchiModalCambiaParcheggio()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:border-sky-500 focus:outline-none">
-            <!-- Popolato dinamicamente da JS con i parcheggi esistenti -->
-          </select>
-        </div>
-        <div>
-          <label class="block font-bold text-gray-400 uppercase mb-1">Seleziona Varco nel Nuovo Parcheggio *</label>
-          <select id="modal-cp-nuovo-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:border-sky-500 focus:outline-none">
-            <!-- Popolato dinamicamente in base al parcheggio selezionato -->
-          </select>
-        </div>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="chiudiModalCambiaParcheggioOp()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
-        <button onclick="confermaCambiaParcheggioOpModal()" class="w-1/2 py-2.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-gray-950 font-black rounded-xl text-xs shadow-md shadow-sky-500/20">Salva Nuovo Parcheggio</button>
-      </div>
+      <button onclick="document.getElementById('modal-anteprima-png').classList.add('hidden')" class="w-full py-2.5 bg-amber-500 text-gray-950 font-black rounded-xl text-xs uppercase">Chiudi Anteprima</button>
     </div>
   </div>
 
@@ -2005,6 +1743,8 @@
       const park = stato.parcheggi.find(p => p.id === parcheggioId);
       const nuovoId = 'CR-' + Math.floor(100000 + Math.random() * 900000);
 
+      caricaDatiDaStorage();
+
       const passObj = {
         id: nuovoId,
         targa: targa,
@@ -2022,7 +1762,7 @@
       if (indiceEsistente >= 0) {
         stato.passRegistrati[indiceEsistente] = passObj;
       } else {
-        stato.passRegistrati.push(passObj);
+        stato.passRegistrati.unshift(passObj);
       }
       salvaDatiInStorage();
       renderizzaRegistroPassAnagrafica();
@@ -2030,7 +1770,7 @@
       passCorrenteGenerato = { ...passObj, parkObj: park };
       renderizzaBadgeGraficoPass(passCorrenteGenerato);
       emettiSuonoFeedback('success');
-      mostraNotifica(`Pass per ${targa} generato con successo!`, "success");
+      mostraNotifica(`Pass per ${targa} salvato nel Registro Pass!`, "success");
     }
 
     function renderizzaBadgeGraficoPass(p) {
@@ -2049,7 +1789,6 @@
       document.getElementById('link-nav-apple').href = `https://maps.apple.com/?q=${queryMappe}`;
 
       const boxQr = document.getElementById('box-visuale-qrcode');
-      boxQr.innerHTML = '';
       const payloadQr = JSON.stringify({
         id: p.id,
         targa: p.targa,
@@ -2060,115 +1799,150 @@
         dataA: p.dataA
       });
 
-      new QRCode(boxQr, {
-        text: payloadQr,
-        width: 176,
-        height: 176,
-        colorDark: "#030712",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M
-      });
+      renderizzaQrCodeAffidabile(boxQr, payloadQr, 165);
     }
 
     function scaricaPassInPDF() {
       const elementoBadge = document.getElementById('contenitore-badge-pass');
       const targa = document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '');
-      esportaElementoInPdfCompleto(elementoBadge, `PASS_${targa}.pdf`, '#030712');
+      esportaElementoInPdfCompleto(elementoBadge, `PASS_${targa}.pdf`, '#111827');
     }
 
     function scaricaPassInPNG() {
       const elementoBadge = document.getElementById('contenitore-badge-pass');
       const targa = document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '');
-      esportaElementoInPngAffidabile(elementoBadge, `PASS_${targa}.png`, '#030712');
+      esportaElementoInPngAffidabile(elementoBadge, `PASS_${targa}.png`, '#111827');
+    }
+
+    function creaWrapperCatturaInViewport(elementoOriginale, bgColor) {
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.zIndex = '9999';
+      overlay.style.backgroundColor = 'rgba(3, 7, 18, 0.92)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.overflow = 'auto';
+
+      const clone = elementoOriginale.cloneNode(true);
+      clone.style.width = '400px';
+      clone.style.maxWidth = '400px';
+      clone.style.margin = '0 auto';
+      clone.style.backgroundColor = bgColor;
+      clone.style.boxSizing = 'border-box';
+
+      // Converte eventuali <canvas> QR nel clone in <img> PNG statiche per evitare riquadri bianchi
+      const origCanvases = elementoOriginale.querySelectorAll('canvas');
+      const cloneCanvases = clone.querySelectorAll('canvas');
+      origCanvases.forEach((origCanvas, idx) => {
+        if (cloneCanvases[idx]) {
+          try {
+            const img = document.createElement('img');
+            img.src = origCanvas.toDataURL('image/png');
+            img.style.width = origCanvas.style.width || '165px';
+            img.style.height = origCanvas.style.height || '165px';
+            img.style.display = 'block';
+            cloneCanvases[idx].parentNode.replaceChild(img, cloneCanvases[idx]);
+          } catch (e) {}
+        }
+      });
+
+      const wrapper = document.createElement('div');
+      wrapper.style.width = '432px';
+      wrapper.style.padding = '16px';
+      wrapper.style.backgroundColor = bgColor;
+      wrapper.style.borderRadius = '24px';
+      wrapper.appendChild(clone);
+      overlay.appendChild(wrapper);
+      document.body.appendChild(overlay);
+
+      return { overlay, wrapper };
     }
 
     function esportaElementoInPdfCompleto(elementoOriginale, nomeFile, bgColor) {
-      mostraNotifica("Generazione PDF completo in corso...", "info");
-      const clone = elementoOriginale.cloneNode(true);
-      clone.style.width = '420px';
-      clone.style.maxWidth = '420px';
-      clone.style.margin = '0 auto';
-      clone.style.boxSizing = 'border-box';
+      mostraNotifica("Generazione PDF con QR Code in corso...", "info");
+      const { overlay, wrapper } = creaWrapperCatturaInViewport(elementoOriginale, bgColor);
 
-      const wrapper = document.createElement('div');
-      wrapper.style.position = 'fixed';
-      wrapper.style.left = '-9999px';
-      wrapper.style.top = '0';
-      wrapper.style.width = '460px';
-      wrapper.style.padding = '20px';
-      wrapper.style.backgroundColor = bgColor;
-      wrapper.appendChild(clone);
-      document.body.appendChild(wrapper);
-
-      const opt = {
-        margin: [8, 8, 8, 8],
-        filename: nomeFile,
-        image: { type: 'png', quality: 1 },
-        html2canvas: {
+      setTimeout(() => {
+        html2canvas(wrapper, {
           scale: 2,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: bgColor,
-          width: 460,
-          windowWidth: 460,
-          scrollX: 0,
-          scrollY: 0
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+          backgroundColor: bgColor
+        }).then(canvas => {
+          document.body.removeChild(overlay);
+          const imgData = canvas.toDataURL('image/png');
+          const opt = {
+            margin: [10, 10, 10, 10],
+            filename: nomeFile,
+            image: { type: 'png', quality: 1 },
+            html2canvas: { scale: 1 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
 
-      html2pdf().set(opt).from(wrapper).save().then(() => {
-        document.body.removeChild(wrapper);
-        mostraNotifica("PDF scaricato per intero!", "success");
-      }).catch(() => {
-        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
-        mostraNotifica("Errore generazione PDF.", "error");
-      });
+          const imgEl = document.createElement('img');
+          imgEl.src = imgData;
+          imgEl.style.width = '135mm';
+          imgEl.style.maxWidth = '100%';
+          imgEl.style.display = 'block';
+          imgEl.style.margin = '0 auto';
+
+          html2pdf().set(opt).from(imgEl).save().then(() => {
+            mostraNotifica("PDF scaricato con successo!", "success");
+          }).catch(() => {
+            mostraNotifica("Errore salvataggio PDF.", "error");
+          });
+        }).catch(() => {
+          if (document.body.contains(overlay)) document.body.removeChild(overlay);
+          mostraNotifica("Errore generazione PDF.", "error");
+        });
+      }, 150);
     }
 
     function esportaElementoInPngAffidabile(elementoOriginale, nomeFile, bgColor) {
-      mostraNotifica("Preparazione immagine PNG...", "info");
-      const clone = elementoOriginale.cloneNode(true);
-      clone.style.width = '420px';
-      clone.style.maxWidth = '420px';
-      clone.style.margin = '0 auto';
+      mostraNotifica("Creazione immagine PNG in corso...", "info");
+      const { overlay, wrapper } = creaWrapperCatturaInViewport(elementoOriginale, bgColor);
 
-      const wrapper = document.createElement('div');
-      wrapper.style.position = 'fixed';
-      wrapper.style.left = '-9999px';
-      wrapper.style.top = '0';
-      wrapper.style.width = '460px';
-      wrapper.style.padding = '20px';
-      wrapper.style.backgroundColor = bgColor;
-      wrapper.appendChild(clone);
-      document.body.appendChild(wrapper);
+      setTimeout(() => {
+        html2canvas(wrapper, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: bgColor
+        }).then(canvas => {
+          document.body.removeChild(overlay);
+          const dataUrl = canvas.toDataURL('image/png');
 
-      html2canvas(wrapper, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: bgColor,
-        width: 460,
-        windowWidth: 460,
-        scrollX: 0,
-        scrollY: 0
-      }).then(canvas => {
-        document.body.removeChild(wrapper);
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = nomeFile;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          if (document.body.contains(link)) document.body.removeChild(link);
-        }, 500);
-        mostraNotifica("Immagine PNG salvata!", "success");
-      }).catch(() => {
-        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
-        mostraNotifica("Impossibile esportare l'immagine.", "error");
-      });
+          // Mostra anche anteprima diretta (essenziale per Safari iPhone/iPad)
+          const previewImg = document.getElementById('img-anteprima-png-generata');
+          const previewModal = document.getElementById('modal-anteprima-png');
+          if (previewImg && previewModal) {
+            previewImg.src = dataUrl;
+            previewModal.classList.remove('hidden');
+          }
+
+          canvas.toBlob(blob => {
+            if (blob) {
+              const blobUrl = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = blobUrl;
+              link.download = nomeFile;
+              document.body.appendChild(link);
+              link.click();
+              setTimeout(() => {
+                if (document.body.contains(link)) document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+              }, 1000);
+            }
+          }, 'image/png');
+
+          mostraNotifica("Immagine PNG pronta e scaricata!", "success");
+        }).catch(() => {
+          if (document.body.contains(overlay)) document.body.removeChild(overlay);
+          mostraNotifica("Impossibile esportare l'immagine.", "error");
+        });
+      }, 150);
     }
 
     function inviaPassSuWhatsApp() {
@@ -2230,7 +2004,16 @@
 
       if (sottoscheda === 'inviti') {
         popolaFormGeneratoreInviti();
+      } else if (sottoscheda === 'anagrafica') {
+        caricaDatiDaStorage();
+        renderizzaRegistroPassAnagrafica();
       }
+    }
+
+    function aggiornaRegistroPassManuale() {
+      caricaDatiDaStorage();
+      renderizzaRegistroPassAnagrafica();
+      mostraNotifica(`Registro aggiornato (${stato.passRegistrati.length} pass presenti).`, "success");
     }
 
     // =========================================================
@@ -2983,10 +2766,19 @@
 
     function renderizzaRegistroPassAnagrafica() {
       const tbody = document.getElementById('tabella-anagrafica-pass');
+      const badgeConteggio = document.getElementById('conteggio-pass-registro');
+      if (badgeConteggio) {
+        badgeConteggio.innerText = `${stato.passRegistrati.length} Pass`;
+      }
       if (!tbody) return;
 
+      if (stato.passRegistrati.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-gray-500 font-sans">Nessun pass registrato in archivio.</td></tr>`;
+        return;
+      }
+
       tbody.innerHTML = stato.passRegistrati.map(p => {
-        const park = stato.parcheggi.find(x => x.id === p.parcheggioId) || { nome: '-' };
+        const park = stato.parcheggi.find(x => x.id === p.parcheggioId) || { nome: p.parkNome || '-' };
         return `
           <tr class="hover:bg-gray-800/40 font-mono">
             <td class="py-2.5 px-3 font-black text-amber-400">${p.targa}</td>
