@@ -1290,6 +1290,23 @@
 
     window.onload = function() {
       caricaDatiDaStorage();
+
+      // Sincronizzazione automatica database pass tra schede e aggiornamenti
+      window.addEventListener('storage', function(e) {
+        if (e.key === 'controlroom_rimini_data_v6') {
+          caricaDatiDaStorage();
+          aggiornaMonitoraggioParcheggi();
+          renderizzaRegistroPassAnagrafica();
+          renderizzaTabellaLog();
+        }
+      });
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+          caricaDatiDaStorage();
+          aggiornaMonitoraggioParcheggi();
+          renderizzaRegistroPassAnagrafica();
+        }
+      });
       
       // Verifica se la pagina è stata aperta tramite un link invito cliente (?invite=...)
       if (verificaEApriModalitaInvitoCliente()) {
@@ -2055,23 +2072,102 @@
 
     function scaricaPassInPDF() {
       const elementoBadge = document.getElementById('contenitore-badge-pass');
-      const opt = {
-        margin: 10,
-        filename: `PASS_${document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#030712' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(elementoBadge).save();
+      const targa = document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '');
+      esportaElementoInPdfCompleto(elementoBadge, `PASS_${targa}.pdf`, '#030712');
     }
 
     function scaricaPassInPNG() {
       const elementoBadge = document.getElementById('contenitore-badge-pass');
-      html2canvas(elementoBadge, { scale: 2, backgroundColor: '#030712' }).then(canvas => {
+      const targa = document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '');
+      esportaElementoInPngAffidabile(elementoBadge, `PASS_${targa}.png`, '#030712');
+    }
+
+    function esportaElementoInPdfCompleto(elementoOriginale, nomeFile, bgColor) {
+      mostraNotifica("Generazione PDF completo in corso...", "info");
+      const clone = elementoOriginale.cloneNode(true);
+      clone.style.width = '420px';
+      clone.style.maxWidth = '420px';
+      clone.style.margin = '0 auto';
+      clone.style.boxSizing = 'border-box';
+
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'fixed';
+      wrapper.style.left = '-9999px';
+      wrapper.style.top = '0';
+      wrapper.style.width = '460px';
+      wrapper.style.padding = '20px';
+      wrapper.style.backgroundColor = bgColor;
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: nomeFile,
+        image: { type: 'png', quality: 1 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: bgColor,
+          width: 460,
+          windowWidth: 460,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(wrapper).save().then(() => {
+        document.body.removeChild(wrapper);
+        mostraNotifica("PDF scaricato per intero!", "success");
+      }).catch(() => {
+        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+        mostraNotifica("Errore generazione PDF.", "error");
+      });
+    }
+
+    function esportaElementoInPngAffidabile(elementoOriginale, nomeFile, bgColor) {
+      mostraNotifica("Preparazione immagine PNG...", "info");
+      const clone = elementoOriginale.cloneNode(true);
+      clone.style.width = '420px';
+      clone.style.maxWidth = '420px';
+      clone.style.margin = '0 auto';
+
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'fixed';
+      wrapper.style.left = '-9999px';
+      wrapper.style.top = '0';
+      wrapper.style.width = '460px';
+      wrapper.style.padding = '20px';
+      wrapper.style.backgroundColor = bgColor;
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      html2canvas(wrapper, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: bgColor,
+        width: 460,
+        windowWidth: 460,
+        scrollX: 0,
+        scrollY: 0
+      }).then(canvas => {
+        document.body.removeChild(wrapper);
+        const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `PASS_${document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '')}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = dataUrl;
+        link.download = nomeFile;
+        link.target = '_blank';
+        document.body.appendChild(link);
         link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+        }, 500);
+        mostraNotifica("Immagine PNG salvata!", "success");
+      }).catch(() => {
+        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+        mostraNotifica("Impossibile esportare l'immagine.", "error");
       });
     }
 
@@ -2213,17 +2309,17 @@
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
-    function condividiLinkInvitoEmail() {
-      const link = document.getElementById('output-url-invito-cliente').value;
-      const azienda = document.getElementById('label-destinatario-link').innerText;
-      const dateStr = document.getElementById('label-date-link').innerText;
-      const subject = `Invito Pass Parcheggio Riservato - ${azienda}`;
-      const body = `Gentile ${azienda},\n\n` +
-                   `Vi inviamo il link personale preconfigurato per generare il Pass di accesso al parcheggio (${dateStr}):\n\n` +
-                   `${link}\n\n` +
-                   `Una volta aperto il link sarà sufficiente digitare la targa del veicolo e il nome del conducente per ottenere immediatamente il QR Code.\n\n` +
-                   `Cordiali saluti,\nControl Room`;
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    function ottieniChiaveTokenInvito(decoded) {
+      if (decoded && decoded.tid) {
+        return 'cr_invite_used_' + decoded.tid;
+      }
+      const raw = (decoded.az || '') + '|' + (decoded.pid || '') + '|' + (decoded.da || '') + '|' + (decoded.a || '');
+      let hash = 0;
+      for (let i = 0; i < raw.length; i++) {
+        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'cr_invite_used_LEGACY_' + Math.abs(hash);
     }
 
     function verificaEApriModalitaInvitoCliente() {
@@ -2244,11 +2340,28 @@
         document.getElementById('guest-invite-indirizzo').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> ${decoded.pind}`;
         document.getElementById('guest-invite-date').innerText = `Dal ${decoded.da} al ${decoded.a}`;
 
-        // Controlla se questo link monouso è già stato utilizzato in precedenza
-        const storageKey = 'cr_invite_used_' + (decoded.tid || btoa(decoded.az + decoded.da + decoded.a).slice(0, 16));
+        // Controlla se questo link monouso è già stato utilizzato in precedenza (storage locale, DB o hash URL)
+        const storageKey = ottieniChiaveTokenInvito(decoded);
+        let passPrecedente = null;
+
         const passSalvatoRaw = localStorage.getItem(storageKey);
         if (passSalvatoRaw) {
-          const passPrecedente = JSON.parse(passSalvatoRaw);
+          passPrecedente = JSON.parse(passSalvatoRaw);
+        } else if (window.location.hash && window.location.hash.startsWith('#pass=')) {
+          try {
+            const hashEncoded = window.location.hash.replace('#pass=', '');
+            passPrecedente = JSON.parse(decodeURIComponent(atob(hashEncoded)));
+            localStorage.setItem(storageKey, JSON.stringify(passPrecedente));
+          } catch (errHash) {}
+        } else if (decoded.tid) {
+          const nelDb = stato.passRegistrati.find(p => p.inviteTid === decoded.tid);
+          if (nelDb) {
+            passPrecedente = nelDb;
+            localStorage.setItem(storageKey, JSON.stringify(passPrecedente));
+          }
+        }
+
+        if (passPrecedente) {
           document.getElementById('guest-form-container').classList.add('hidden');
           document.getElementById('guest-link-usato-banner').classList.remove('hidden');
           mostraPassClienteSuSchermo(passPrecedente);
@@ -2320,7 +2433,7 @@
     function generaPassSelfServiceCliente() {
       if (!datiInvitoAttivoCliente) return;
       const d = datiInvitoAttivoCliente;
-      const storageKey = 'cr_invite_used_' + (d.tid || btoa(d.az + d.da + d.a).slice(0, 16));
+      const storageKey = ottieniChiaveTokenInvito(d);
 
       // Doppio controllo se già usato
       const giaUsato = localStorage.getItem(storageKey);
@@ -2328,7 +2441,7 @@
         document.getElementById('guest-form-container').classList.add('hidden');
         document.getElementById('guest-link-usato-banner').classList.remove('hidden');
         mostraPassClienteSuSchermo(JSON.parse(giaUsato));
-        mostraNotifica("Questo link è già stato utilizzato in precedenza.", "warning");
+        mostraNotifica("Link già usato: non più valido per nuove registrazioni.", "warning");
         return;
       }
 
@@ -2340,9 +2453,13 @@
         return;
       }
 
+      // Ricarica sempre i dati aggiornati prima di salvare il nuovo pass nel DB
+      caricaDatiDaStorage();
+
       const passId = 'CR-' + Math.floor(100000 + Math.random() * 900000);
       const nuovoPassCliente = {
         id: passId,
+        inviteTid: d.tid || '',
         targa: targa,
         nome: nomeConducente,
         azienda: d.az,
@@ -2357,55 +2474,37 @@
         statoVeicolo: 'ESTERNO'
       };
 
-      // Registra il link come usato e salva il pass generato
+      // Registra il link come usato e salva il pass generato anche nell'URL
       localStorage.setItem(storageKey, JSON.stringify(nuovoPassCliente));
+      try {
+        const hashEncoded = btoa(encodeURIComponent(JSON.stringify(nuovoPassCliente)));
+        window.history.replaceState(null, '', window.location.pathname + window.location.search + '#pass=' + hashEncoded);
+      } catch (eHist) {}
 
-      stato.passRegistrati.push(nuovoPassCliente);
+      const idxEsistente = stato.passRegistrati.findIndex(p => p.targa === targa);
+      if (idxEsistente >= 0) {
+        stato.passRegistrati[idxEsistente] = nuovoPassCliente;
+      } else {
+        stato.passRegistrati.push(nuovoPassCliente);
+      }
       salvaDatiInStorage();
 
       document.getElementById('guest-form-container').classList.add('hidden');
+      document.getElementById('guest-link-usato-banner').classList.remove('hidden');
       mostraPassClienteSuSchermo(nuovoPassCliente);
-      mostraNotifica("Il tuo Pass con QR Code è pronto! Il link monouso è stato completato.", "success");
-    }
-
-    function eseguiDownloadBlobSicuro(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 300);
+      mostraNotifica("Pass generato! Il link mostra ora il QR Code già creato e non è più riutilizzabile.", "success");
     }
 
     function scaricaPassClientePDF() {
       const el = document.getElementById('guest-badge-stampabile');
       const targa = document.getElementById('guest-badge-targa').innerText.replace(/\s+/g, '');
-      mostraNotifica("Generazione PDF con QR Code in corso...", "info");
-      html2pdf().set({
-        margin: 10,
-        filename: `PASS_${targa}.pdf`,
-        image: { type: 'png', quality: 1 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#111827' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(el).save();
+      esportaElementoInPdfCompleto(el, `PASS_${targa}.pdf`, '#111827');
     }
 
     function scaricaPassClientePNG() {
       const el = document.getElementById('guest-badge-stampabile');
       const targa = document.getElementById('guest-badge-targa').innerText.replace(/\s+/g, '');
-      mostraNotifica("Preparazione immagine PNG...", "info");
-      html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#111827' }).then(canvas => {
-        canvas.toBlob(blob => {
-          if (blob) {
-            eseguiDownloadBlobSicuro(blob, `PASS_${targa}.png`);
-            mostraNotifica("Immagine Pass scaricata!", "success");
-          }
-        }, 'image/png');
-      });
+      esportaElementoInPngAffidabile(el, `PASS_${targa}.png`, '#111827');
     }
 
     function renderizzaTuttoAdmin() {
