@@ -103,19 +103,30 @@
         </button>
       </div>
 
+      <!-- Avviso Link Monouso Già Utilizzato -->
+      <div id="guest-link-usato-banner" class="hidden bg-amber-950/90 border-2 border-amber-500/60 rounded-3xl p-5 text-center space-y-2 shadow-xl">
+        <div class="w-11 h-11 mx-auto rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <h3 class="text-sm font-black text-amber-300 uppercase tracking-wider">LINK GIÀ USATO — NON PIÙ VALIDO PER NUOVE REGISTRAZIONI</h3>
+        <p class="text-xs text-amber-100/90 leading-relaxed">
+          Questo invito monouso è già stato utilizzato. Di seguito trovi il <strong>Pass con QR Code generato in precedenza</strong> pronto per l'accesso al varco:
+        </p>
+      </div>
+
       <!-- Pass Grafico Generato per il Cliente -->
       <div id="guest-pass-risultato" class="hidden space-y-4">
-        <div id="guest-badge-stampabile" class="badge-ologramma rounded-3xl p-6 border-2 border-emerald-500/40 bg-gradient-to-b from-gray-900 to-gray-950 text-white shadow-2xl">
+        <div id="guest-badge-stampabile" class="rounded-3xl p-6 border-2 border-emerald-500/40 bg-gray-900 text-white shadow-2xl">
           <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-3">
             <div>
-              <span class="text-[10px] uppercase font-black tracking-widest text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">PASS CONFERMATO</span>
-              <h3 id="guest-badge-azienda" class="text-sm font-black uppercase text-white mt-1">-</h3>
+              <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400">PASS ACCESSO CONFERMATO</span>
+              <h4 id="guest-badge-azienda" class="text-sm font-black uppercase text-white mt-0.5">-</h4>
             </div>
-            <span id="guest-badge-id" class="text-xs font-mono font-bold text-amber-400">#CR-000</span>
+            <span id="guest-badge-id" class="text-xs font-mono font-bold text-amber-400">#CR-000000</span>
           </div>
 
           <div class="bg-black/70 border-2 border-amber-500/60 rounded-2xl p-3 text-center my-2">
-            <div class="text-[10px] text-gray-400 font-mono uppercase">TARGA VEICOLO</div>
+            <div class="text-[10px] text-gray-400 font-mono uppercase">TARGA AUTORIZZATA</div>
             <div id="guest-badge-targa" class="text-3xl font-black tracking-widest text-white cornice-targa uppercase">-</div>
           </div>
 
@@ -487,7 +498,7 @@
         <!-- ANTEPRIMA BADGE GRAFICO DEL PASS CON AZIONI -->
         <div class="lg:col-span-6 space-y-4">
           
-          <div id="contenitore-badge-pass" class="badge-ologramma rounded-3xl p-6 border-2 border-amber-500/30 relative overflow-hidden bg-gradient-to-b from-gray-900/90 to-gray-950/95 text-white shadow-2xl">
+          <div id="contenitore-badge-pass" class="rounded-3xl p-6 border-2 border-amber-500/30 relative overflow-hidden bg-gray-900 text-white shadow-2xl">
             <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
               <div>
                 <span class="text-[10px] uppercase font-black tracking-widest text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">PASS ACCESSO UFFICIALE</span>
@@ -605,6 +616,53 @@
           <i class="fa-solid fa-database"></i> REGISTRO PASS
         </button>
       </div>
+
+      <!-- SUB-SCHEDA A: PARCHEGGI & VARCHI -->
+      <div id="subsezione-parcheggi" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-square-parking text-amber-500"></i> Gestione Parcheggi e Varchi Attivi
+          </h3>
+          <button onclick="apriModalAggiungiParcheggio()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md">
+            <i class="fa-solid fa-plus"></i> NUOVO PARCHEGGIO
+          </button>
+        </div>
+        <div id="lista-parcheggi-admin" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Popolato da JS -->
+        </div>
+      </div>
+
+      <!-- SUB-SCHEDA B: OPERATORI DI CONTROLLO -->
+      <div id="subsezione-operatori" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-users-gear text-amber-500"></i> Operatori & Assegnazione Varchi
+          </h3>
+          <button onclick="apriModalAggiungiOperatore()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md">
+            <i class="fa-solid fa-user-plus"></i> NUOVO OPERATORE
+          </button>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="text-gray-500 uppercase border-b border-gray-800 bg-gray-950/40">
+                <tr>
+                  <th class="py-3 px-4">Operatore</th>
+                  <th class="py-3 px-4">PIN Accesso</th>
+                  <th class="py-3 px-4">Parcheggio</th>
+                  <th class="py-3 px-4">Varco</th>
+                  <th class="py-3 px-4">Direzione</th>
+                  <th class="py-3 px-4 text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="tabella-operatori-admin" class="divide-y divide-gray-800/60">
+                <!-- Popolato da JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- SUB-SCHEDA B2: GENERATORE LINK PERSONALIZZATI PER CLIENTI -->
       <div id="subsezione-inviti" class="hidden space-y-6">
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 sm:p-6 space-y-4">
@@ -2112,7 +2170,9 @@
       }
 
       const park = stato.parcheggi.find(p => p.id === parkId) || stato.parcheggi[0];
+      const tokenId = 'INV-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
       const payload = {
+        tid: tokenId,
         az: azienda,
         pid: park.id,
         pnm: park.nome,
@@ -2184,6 +2244,16 @@
         document.getElementById('guest-invite-indirizzo').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> ${decoded.pind}`;
         document.getElementById('guest-invite-date').innerText = `Dal ${decoded.da} al ${decoded.a}`;
 
+        // Controlla se questo link monouso è già stato utilizzato in precedenza
+        const storageKey = 'cr_invite_used_' + (decoded.tid || btoa(decoded.az + decoded.da + decoded.a).slice(0, 16));
+        const passSalvatoRaw = localStorage.getItem(storageKey);
+        if (passSalvatoRaw) {
+          const passPrecedente = JSON.parse(passSalvatoRaw);
+          document.getElementById('guest-form-container').classList.add('hidden');
+          document.getElementById('guest-link-usato-banner').classList.remove('hidden');
+          mostraPassClienteSuSchermo(passPrecedente);
+        }
+
         return true;
       } catch (e) {
         console.error("Token invito non valido:", e);
@@ -2191,8 +2261,77 @@
       }
     }
 
+    function mostraPassClienteSuSchermo(passData) {
+      document.getElementById('guest-badge-azienda').innerText = passData.azienda;
+      document.getElementById('guest-badge-id').innerText = `#${passData.id}`;
+      document.getElementById('guest-badge-targa').innerText = passData.targa;
+      document.getElementById('guest-badge-park').innerText = passData.parkNome;
+      document.getElementById('guest-badge-conducente').innerText = passData.nome;
+      document.getElementById('guest-badge-validita').innerText = `${passData.dataDa} / ${passData.dataA}`;
+
+      const queryMappe = encodeURIComponent(passData.parkIndirizzo || '');
+      const coords = passData.parkCoords ? passData.parkCoords.replace(/\s+/g, '') : null;
+      document.getElementById('guest-nav-google').href = `https://www.google.com/maps/search/?api=1&query=${queryMappe}`;
+      document.getElementById('guest-nav-waze').href = coords ? `https://waze.com/ul?ll=${coords}&navigate=yes` : `https://waze.com/ul?q=${queryMappe}`;
+      document.getElementById('guest-nav-apple').href = `https://maps.apple.com/?q=${queryMappe}`;
+
+      const boxQr = document.getElementById('guest-box-qrcode');
+      renderizzaQrCodeAffidabile(boxQr, JSON.stringify({
+        id: passData.id,
+        targa: passData.targa,
+        nome: passData.nome,
+        azienda: passData.azienda,
+        parcheggioId: passData.parcheggioId,
+        dataDa: passData.dataDa,
+        dataA: passData.dataA
+      }), 155);
+
+      document.getElementById('guest-pass-risultato').classList.remove('hidden');
+    }
+
+    function renderizzaQrCodeAffidabile(containerEl, payloadText, sizePx) {
+      containerEl.innerHTML = '';
+      const tempDiv = document.createElement('div');
+      new QRCode(tempDiv, {
+        text: payloadText,
+        width: sizePx,
+        height: sizePx,
+        colorDark: "#030712",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      setTimeout(() => {
+        const canvas = tempDiv.querySelector('canvas');
+        if (canvas) {
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL('image/png');
+          img.alt = 'QR Code Pass';
+          img.style.width = sizePx + 'px';
+          img.style.height = sizePx + 'px';
+          img.style.display = 'block';
+          containerEl.innerHTML = '';
+          containerEl.appendChild(img);
+        } else {
+          containerEl.appendChild(tempDiv);
+        }
+      }, 60);
+    }
+
     function generaPassSelfServiceCliente() {
       if (!datiInvitoAttivoCliente) return;
+      const d = datiInvitoAttivoCliente;
+      const storageKey = 'cr_invite_used_' + (d.tid || btoa(d.az + d.da + d.a).slice(0, 16));
+
+      // Doppio controllo se già usato
+      const giaUsato = localStorage.getItem(storageKey);
+      if (giaUsato) {
+        document.getElementById('guest-form-container').classList.add('hidden');
+        document.getElementById('guest-link-usato-banner').classList.remove('hidden');
+        mostraPassClienteSuSchermo(JSON.parse(giaUsato));
+        mostraNotifica("Questo link è già stato utilizzato in precedenza.", "warning");
+        return;
+      }
+
       const targa = document.getElementById('guest-input-targa').value.trim().toUpperCase();
       const nomeConducente = document.getElementById('guest-input-nome').value.trim();
 
@@ -2201,68 +2340,56 @@
         return;
       }
 
-      const d = datiInvitoAttivoCliente;
       const passId = 'CR-' + Math.floor(100000 + Math.random() * 900000);
-
-      // Salva anche nel registro locale se aperto sullo stesso dispositivo
-      stato.passRegistrati.push({
+      const nuovoPassCliente = {
         id: passId,
         targa: targa,
         nome: nomeConducente,
         azienda: d.az,
         parcheggioId: d.pid,
+        parkNome: d.pnm,
+        parkIndirizzo: d.pind,
+        parkCoords: d.pcrd || '',
         dataDa: d.da,
         dataA: d.a,
         telefono: '',
         email: '',
         statoVeicolo: 'ESTERNO'
-      });
+      };
+
+      // Registra il link come usato e salva il pass generato
+      localStorage.setItem(storageKey, JSON.stringify(nuovoPassCliente));
+
+      stato.passRegistrati.push(nuovoPassCliente);
       salvaDatiInStorage();
 
-      document.getElementById('guest-badge-azienda').innerText = d.az;
-      document.getElementById('guest-badge-id').innerText = `#${passId}`;
-      document.getElementById('guest-badge-targa').innerText = targa;
-      document.getElementById('guest-badge-park').innerText = d.pnm;
-      document.getElementById('guest-badge-conducente').innerText = nomeConducente;
-      document.getElementById('guest-badge-validita').innerText = `${d.da} / ${d.a}`;
+      document.getElementById('guest-form-container').classList.add('hidden');
+      mostraPassClienteSuSchermo(nuovoPassCliente);
+      mostraNotifica("Il tuo Pass con QR Code è pronto! Il link monouso è stato completato.", "success");
+    }
 
-      const queryMappe = encodeURIComponent(d.pind);
-      const coords = d.pcrd ? d.pcrd.replace(/\s+/g, '') : null;
-      document.getElementById('guest-nav-google').href = `https://www.google.com/maps/search/?api=1&query=${queryMappe}`;
-      document.getElementById('guest-nav-waze').href = coords ? `https://waze.com/ul?ll=${coords}&navigate=yes` : `https://waze.com/ul?q=${queryMappe}`;
-      document.getElementById('guest-nav-apple').href = `https://maps.apple.com/?q=${queryMappe}`;
-
-      const boxQr = document.getElementById('guest-box-qrcode');
-      boxQr.innerHTML = '';
-      new QRCode(boxQr, {
-        text: JSON.stringify({
-          id: passId,
-          targa: targa,
-          nome: nomeConducente,
-          azienda: d.az,
-          parcheggioId: d.pid,
-          dataDa: d.da,
-          dataA: d.a
-        }),
-        width: 155,
-        height: 155,
-        colorDark: "#030712",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M
-      });
-
-      document.getElementById('guest-pass-risultato').classList.remove('hidden');
-      mostraNotifica("Il tuo Pass con QR Code è pronto!", "success");
+    function eseguiDownloadBlobSicuro(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 300);
     }
 
     function scaricaPassClientePDF() {
       const el = document.getElementById('guest-badge-stampabile');
       const targa = document.getElementById('guest-badge-targa').innerText.replace(/\s+/g, '');
+      mostraNotifica("Generazione PDF con QR Code in corso...", "info");
       html2pdf().set({
         margin: 10,
         filename: `PASS_${targa}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#030712' },
+        image: { type: 'png', quality: 1 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#111827' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }).from(el).save();
     }
@@ -2270,11 +2397,14 @@
     function scaricaPassClientePNG() {
       const el = document.getElementById('guest-badge-stampabile');
       const targa = document.getElementById('guest-badge-targa').innerText.replace(/\s+/g, '');
-      html2canvas(el, { scale: 2, backgroundColor: '#030712' }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `PASS_${targa}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      mostraNotifica("Preparazione immagine PNG...", "info");
+      html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#111827' }).then(canvas => {
+        canvas.toBlob(blob => {
+          if (blob) {
+            eseguiDownloadBlobSicuro(blob, `PASS_${targa}.png`);
+            mostraNotifica("Immagine Pass scaricata!", "success");
+          }
+        }, 'image/png');
       });
     }
 
@@ -2285,62 +2415,72 @@
     }
 
     function renderizzaListaParcheggiAdmin() {
-      const container = document.getElementById('lista-parcheggi-amministrazione');
+      const container = document.getElementById('lista-parcheggi-admin');
       if (!container) return;
-      container.innerHTML = '';
 
-      stato.parcheggi.forEach(p => {
-        const card = document.createElement('div');
-        card.className = "bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-lg";
-        card.innerHTML = `
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-800 pb-3">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-black text-white uppercase">${p.nome}</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-800 text-amber-400 font-mono">Capienza: ${p.capienza} posti</span>
-              </div>
-              <p class="text-xs text-gray-400 mt-0.5"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i>${p.indirizzo}</p>
-            </div>
+      container.innerHTML = stato.parcheggi.map(p => {
+        const residui = Math.max(0, p.capienza - p.presenti);
+        const varchiHtml = p.varchi.map(v => `
+          <div class="flex items-center justify-between bg-gray-950/70 border border-gray-800 rounded-xl px-3 py-2 text-xs">
             <div class="flex items-center gap-2">
-              <button onclick="apriModalAggiungiVarco('${p.id}')" class="px-3 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                <i class="fa-solid fa-plus"></i> Aggiungi Varco
-              </button>
-              <button onclick="eliminaParcheggio('${p.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/80 text-red-300 rounded-lg text-xs font-bold">
+              <span class="px-2 py-0.5 rounded text-[10px] font-black ${v.direzione === 'ENTRATA' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}">
+                ${v.direzione}
+              </span>
+              <span class="font-bold text-gray-200">${v.nome}</span>
+            </div>
+            <button onclick="eliminaVarco('${p.id}', '${v.id}')" class="text-gray-500 hover:text-red-400 p-1" title="Elimina varco">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `).join('');
+
+        return `
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-lg">
+            <div class="flex items-start justify-between gap-2 border-b border-gray-800 pb-3">
+              <div>
+                <h4 class="text-base font-black text-white uppercase">${p.nome}</h4>
+                <p class="text-xs text-gray-400 mt-0.5"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i> ${p.indirizzo}</p>
+              </div>
+              <button onclick="eliminaParcheggio('${p.id}')" class="text-gray-500 hover:text-red-400 p-1.5" title="Rimuovi Parcheggio">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </div>
-          </div>
 
-          <div class="space-y-2">
-            <span class="text-[11px] uppercase font-bold text-gray-400 block">Varchi configurati per ${p.nome}:</span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              ${p.varchi.map(v => `
-                <div class="bg-gray-950 border border-gray-800 rounded-xl p-3 flex items-center justify-between">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg ${v.direzione === 'ENTRATA' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'} flex items-center justify-center text-xs font-bold">
-                      <i class="fa-solid ${v.direzione === 'ENTRATA' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket'}"></i>
-                    </span>
-                    <div>
-                      <div class="font-bold text-white text-xs">${v.nome}</div>
-                      <div class="text-[10px] ${v.direzione === 'ENTRATA' ? 'text-emerald-400' : 'text-blue-400'} font-semibold">${v.direzione}</div>
-                    </div>
-                  </div>
-                  <button onclick="eliminaVarco('${p.id}', '${v.id}')" class="text-gray-500 hover:text-red-400 p-1 text-xs" title="Elimina Varco">
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
-                </div>
-              `).join('')}
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="bg-gray-950 border border-gray-800 rounded-xl p-2">
+                <span class="text-[10px] text-gray-400 block">Capienza</span>
+                <strong class="text-sm font-black text-white">${p.capienza}</strong>
+              </div>
+              <div class="bg-gray-950 border border-gray-800 rounded-xl p-2">
+                <span class="text-[10px] text-gray-400 block">Dentro</span>
+                <strong class="text-sm font-black text-amber-400">${p.presenti}</strong>
+              </div>
+              <div class="bg-gray-950 border border-gray-800 rounded-xl p-2">
+                <span class="text-[10px] text-gray-400 block">Liberi</span>
+                <strong class="text-sm font-black text-emerald-400">${residui}</strong>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase text-gray-400">Varchi Configurati (${p.varchi.length})</span>
+                <button onclick="apriModalAggiungiVarco('${p.id}')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-amber-400 rounded-lg text-[11px] font-bold flex items-center gap-1">
+                  <i class="fa-solid fa-plus"></i> Aggiungi Varco
+                </button>
+              </div>
+              <div class="space-y-1.5">
+                ${varchiHtml}
+              </div>
             </div>
           </div>
         `;
-        container.appendChild(card);
-      });
+      }).join('');
     }
 
     function apriModalAggiungiParcheggio() {
       document.getElementById('modal-p-nome').value = '';
-      document.getElementById('modal-p-capienza').value = '250';
-      document.getElementById('modal-p-indirizzo').value = 'Rimini RN';
+      document.getElementById('modal-p-capienza').value = '';
+      document.getElementById('modal-p-indirizzo').value = '';
       document.getElementById('modal-p-coordinate').value = '';
       document.getElementById('modal-parcheggio').classList.remove('hidden');
     }
@@ -2351,53 +2491,54 @@
 
     function salvaNuovoParcheggioModal() {
       const nome = document.getElementById('modal-p-nome').value.trim();
-      const capienza = parseInt(document.getElementById('modal-p-capienza').value);
+      const capienza = parseInt(document.getElementById('modal-p-capienza').value, 10);
       const indirizzo = document.getElementById('modal-p-indirizzo').value.trim();
       const coords = document.getElementById('modal-p-coordinate').value.trim();
 
-      if (!nome || !capienza || !indirizzo) {
-        mostraNotifica("Compila tutti i campi obbligatori.", "warning");
+      if (!nome || isNaN(capienza) || capienza <= 0 || !indirizzo) {
+        mostraNotifica("Compila Nome, Capienza valida e Indirizzo.", "warning");
         return;
       }
 
-      const nuovoP = {
-        id: 'PARK-' + Date.now(),
+      const nuovoId = 'PARK-' + Date.now();
+      stato.parcheggi.push({
+        id: nuovoId,
         nome: nome,
         capienza: capienza,
         presenti: 0,
         indirizzo: indirizzo,
-        coords: coords || '44.0678,12.5695',
+        coords: coords,
         varchi: [
-          { id: 'V-' + Date.now() + '-1', nome: 'Varco Entrata 1', direzione: 'ENTRATA', attivo: true },
-          { id: 'V-' + Date.now() + '-2', nome: 'Varco Uscita 1', direzione: 'USCITA', attivo: true }
+          { id: 'V-' + Math.floor(1000 + Math.random() * 9000), nome: 'Varco Entrata 1', direzione: 'ENTRATA', attivo: true },
+          { id: 'V-' + Math.floor(1000 + Math.random() * 9000), nome: 'Varco Uscita 1', direzione: 'USCITA', attivo: true }
         ]
-      };
+      });
 
-      stato.parcheggi.push(nuovoP);
       salvaDatiInStorage();
       chiudiModalParcheggio();
-      renderizzaListaParcheggiAdmin();
       aggiornaMonitoraggioParcheggi();
       aggiornaSelettoreParcheggiCreaPass();
-      mostraNotifica("Nuovo Parcheggio e Varchi creati!", "success");
+      renderizzaTuttoAdmin();
+      mostraNotifica(`Parcheggio "${nome}" creato con successo!`, "success");
     }
 
-    function eliminaParcheggio(pId) {
+    function eliminaParcheggio(parkId) {
       if (stato.parcheggi.length <= 1) {
-        mostraNotifica("Deve esserci almeno un parcheggio configurato.", "warning");
+        mostraNotifica("Deve rimanere almeno un parcheggio configurato.", "warning");
         return;
       }
-      stato.parcheggi = stato.parcheggi.filter(p => p.id !== pId);
+      stato.parcheggi = stato.parcheggi.filter(p => p.id !== parkId);
       salvaDatiInStorage();
-      renderizzaListaParcheggiAdmin();
       aggiornaMonitoraggioParcheggi();
       aggiornaSelettoreParcheggiCreaPass();
-      mostraNotifica("Parcheggio rimosso con successo.", "success");
+      renderizzaTuttoAdmin();
+      mostraNotifica("Parcheggio rimosso.", "info");
     }
 
-    function apriModalAggiungiVarco(parcheggioId) {
-      document.getElementById('modal-v-parcheggio-id').value = parcheggioId;
+    function apriModalAggiungiVarco(parkId) {
+      document.getElementById('modal-v-parcheggio-id').value = parkId;
       document.getElementById('modal-v-nome').value = '';
+      document.getElementById('modal-v-direzione').value = 'ENTRATA';
       document.getElementById('modal-varco').classList.remove('hidden');
     }
 
@@ -2406,46 +2547,45 @@
     }
 
     function confermaAggiungiVarcoModal() {
-      const pId = document.getElementById('modal-v-parcheggio-id').value;
-      const nomeVarco = document.getElementById('modal-v-nome').value.trim();
-      const dirVarco = document.getElementById('modal-v-direzione').value;
+      const parkId = document.getElementById('modal-v-parcheggio-id').value;
+      const nome = document.getElementById('modal-v-nome').value.trim();
+      const direzione = document.getElementById('modal-v-direzione').value;
 
-      if (!nomeVarco) {
-        mostraNotifica("Inserisci un nome per il varco.", "warning");
+      if (!nome) {
+        mostraNotifica("Inserisci il nome del varco.", "warning");
         return;
       }
 
-      const park = stato.parcheggi.find(p => p.id === pId);
+      const park = stato.parcheggi.find(p => p.id === parkId);
       if (park) {
         park.varchi.push({
           id: 'V-' + Date.now(),
-          nome: nomeVarco,
-          direzione: dirVarco,
+          nome: nome,
+          direzione: direzione,
           attivo: true
         });
         salvaDatiInStorage();
         chiudiModalVarco();
-        renderizzaListaParcheggiAdmin();
         aggiornaMonitoraggioParcheggi();
-        mostraNotifica("Nuovo varco aggiunto!", "success");
+        renderizzaTuttoAdmin();
+        mostraNotifica(`Varco "${nome}" (${direzione}) aggiunto!`, "success");
       }
     }
 
-    function eliminaVarco(pId, vId) {
-      const park = stato.parcheggi.find(p => p.id === pId);
+    function eliminaVarco(parkId, varcoId) {
+      const park = stato.parcheggi.find(p => p.id === parkId);
       if (!park) return;
       if (park.varchi.length <= 1) {
-        mostraNotifica("Ogni parcheggio deve avere almeno un varco attivo.", "warning");
+        mostraNotifica("Il parcheggio deve avere almeno un varco.", "warning");
         return;
       }
-      park.varchi = park.varchi.filter(v => v.id !== vId);
+      park.varchi = park.varchi.filter(v => v.id !== varcoId);
       salvaDatiInStorage();
-      renderizzaListaParcheggiAdmin();
       aggiornaMonitoraggioParcheggi();
+      renderizzaTuttoAdmin();
       mostraNotifica("Varco eliminato.", "info");
     }
 
-    // TABELLA OPERATORI IN ADMIN (CON PULSANTE CAMBIA VARCO IN AZIONI)
     function renderizzaTabellaOperatoriAdmin() {
       const tbody = document.getElementById('tabella-operatori-admin');
       if (!tbody) return;
@@ -2453,38 +2593,29 @@
       tbody.innerHTML = stato.operatori.map(op => {
         const park = stato.parcheggi.find(p => p.id === op.parcheggioId);
         const varco = park ? park.varchi.find(v => v.id === op.varcoId) : null;
-        const parkNome = park ? park.nome : '<span class="text-red-400 italic">Non assegnato</span>';
-        const varcoNome = varco ? varco.nome : '<span class="text-red-400 italic">Nessun varco</span>';
-        const badgeDir = varco && varco.direzione === 'USCITA' 
-          ? '<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold">🔴 USCITA</span>'
-          : '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">🟢 ENTRATA</span>';
+        const direzione = varco ? varco.direzione : 'ENTRATA';
 
         return `
           <tr class="hover:bg-gray-800/40">
-            <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
-              <div class="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
-                ${op.nome.charAt(0)}
-              </div>
-              ${op.nome}
+            <td class="py-3 px-4 font-bold text-white">${op.nome}</td>
+            <td class="py-3 px-4 font-mono text-amber-400 font-bold">${op.pin}</td>
+            <td class="py-3 px-4 text-gray-300">${park ? park.nome : '-'}</td>
+            <td class="py-3 px-4 text-gray-300 font-semibold">${varco ? varco.nome : '-'}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded text-[10px] font-black ${direzione === 'ENTRATA' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}">
+                ${direzione}
+              </span>
             </td>
-            <td class="py-3 px-4 font-mono font-bold text-amber-400">${op.pin}</td>
-            <td class="py-3 px-4 text-gray-200 font-medium">${parkNome}</td>
-            <td class="py-3 px-4 text-white font-bold">${varcoNome}</td>
-            <td class="py-3 px-4">${badgeDir}</td>
-            <td class="py-3 px-4 text-right">
-              <div class="flex items-center justify-end gap-1.5 flex-wrap">
-                <!-- PULSANTE CAMBIA PARCHEGGIO -->
-                <button onclick="apriModalCambiaParcheggioOp('${op.id}')" class="px-2.5 py-1.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-gray-950 rounded-xl text-xs font-black transition-all flex items-center gap-1 shadow-md shadow-sky-500/20 active:scale-95" title="Sposta l'operatore in un altro parcheggio esistente">
-                  <i class="fa-solid fa-square-parking"></i> Cambia Parcheggio
-                </button>
-                <!-- PULSANTE CAMBIA VARCO / RIASSEGNAZIONE -->
-                <button onclick="apriModalModificaOperatore('${op.id}')" class="px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 rounded-xl text-xs font-black transition-all flex items-center gap-1 shadow-md shadow-amber-500/20 active:scale-95" title="Cambia il varco assegnato a questo operatore">
-                  <i class="fa-solid fa-arrows-rotate"></i> Cambia Varco
-                </button>
-                <button onclick="eliminaOperatore('${op.id}')" class="p-1.5 text-gray-500 hover:text-red-400 rounded-lg transition-colors ml-0.5" title="Rimuovi Operatore">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
+            <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+              <button onclick="apriModalCambiaParcheggioOp('${op.id}')" class="px-2 py-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-lg text-[11px] font-bold" title="Sposta parcheggio">
+                <i class="fa-solid fa-square-parking"></i>
+              </button>
+              <button onclick="apriModalModificaOperatore('${op.id}')" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg text-[11px] font-bold" title="Modifica operatore/varco">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="eliminaOperatore('${op.id}')" class="px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-[11px] font-bold" title="Elimina operatore">
+                <i class="fa-solid fa-trash"></i>
+              </button>
             </td>
           </tr>
         `;
