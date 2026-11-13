@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CONTROL ROOM - Gestione Accessi Parcheggio</title>
+  
+  <!-- CONFIGURAZIONE PROGRESSIVE WEB APP / APP STANDALONE -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ControlRoom">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#030712">
+
+  <!-- TAILWIND CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FONT AWESOME ICONS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- QR CODE GENERATOR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- HTML5 QR CODE CAMERA SCANNER -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- HTML2CANVAS & HTML2PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- TONE.JS AUDIO FEEDBACK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, select, textarea {
+      user-select: text;
+    }
+    .badge-ologramma {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+    }
+    .cornice-targa {
+      letter-spacing: 0.18em;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    #lettore-fotocamera-qr video {
+      border-radius: 1rem;
+      object-fit: cover;
+      width: 100% !important;
+      max-height: 320px !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- ======================================================== -->
+  <!-- SCHERMATA PORTALE SELF-SERVICE INVITO CLIENTE (?invite=) -->
+  <!-- ======================================================== -->
+  <div id="schermata-invito-cliente" class="hidden fixed inset-0 z-[210] bg-gray-950 overflow-y-auto p-4 sm:p-6">
+    <div class="max-w-lg mx-auto space-y-6 my-4">
+      <!-- Header Portale Ospite -->
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-gray-950 text-2xl font-black shadow-lg shadow-amber-500/20">
+          <i class="fa-solid fa-car-side"></i>
+        </div>
+        <h2 class="text-xl font-black tracking-wider text-white uppercase">CONTROL ROOM <span class="text-amber-500 text-xs px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">TECNOLOGY</span></h2>
+        <p class="text-xs text-gray-400">Portale Registrazione Veicolo Riservato</p>
+      </div>
+
+      <!-- Riepilogo Condizioni Riservate dall'Amministratore (Bloccate) -->
+      <div class="bg-gray-900 border border-amber-500/30 rounded-3xl p-5 space-y-3 shadow-xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+          <span class="text-[10px] font-black uppercase tracking-widest text-amber-400">INVITO UFFICIALE RISERVATO A:</span>
+          <i class="fa-solid fa-lock text-xs text-amber-500" title="Parametri pre-autorizzati dall'organizzatore"></i>
+        </div>
+        <div>
+          <div id="guest-invite-azienda" class="text-lg font-black text-white uppercase">-</div>
+          <div id="guest-invite-parcheggio" class="text-xs font-bold text-amber-400 mt-1"><i class="fa-solid fa-square-parking mr-1"></i> -</div>
+          <div id="guest-invite-indirizzo" class="text-[11px] text-gray-400 mt-0.5"><i class="fa-solid fa-location-dot mr-1"></i> -</div>
+        </div>
+        <div class="bg-gray-950/80 border border-gray-800 rounded-xl p-3 flex items-center justify-between text-xs">
+          <span class="text-gray-400">Validità Autorizzata:</span>
+          <span id="guest-invite-date" class="font-mono font-bold text-emerald-400">-</span>
+        </div>
+      </div>
+
+      <!-- Modulo Compilazione Targa del Cliente -->
+      <div id="guest-form-container" class="bg-gray-900 border border-gray-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
+        <h3 class="text-sm font-extrabold text-white uppercase tracking-wider">Inserisci i dati del tuo veicolo per ottenere il QR Pass:</h3>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Targa Veicolo *</label>
+          <input id="guest-input-targa" type="text" placeholder="ES: AA123BB" maxlength="10" class="w-full bg-gray-950 border-2 border-gray-700 rounded-xl px-4 py-3 text-white font-black text-xl tracking-widest uppercase focus:border-amber-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nome e Cognome Conducente *</label>
+          <input id="guest-input-nome" type="text" placeholder="Es: Mario Rossi" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+        </div>
+        <button onclick="generaPassSelfServiceCliente()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black rounded-xl text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-qrcode"></i> GENERA IL MIO PASS CON QR CODE
+        </button>
+      </div>
+
+      <!-- Pass Grafico Generato per il Cliente -->
+      <div id="guest-pass-risultato" class="hidden space-y-4">
+        <div id="guest-badge-stampabile" class="badge-ologramma rounded-3xl p-6 border-2 border-emerald-500/40 bg-gradient-to-b from-gray-900 to-gray-950 text-white shadow-2xl">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-3">
+            <div>
+              <span class="text-[10px] uppercase font-black tracking-widest text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">PASS CONFERMATO</span>
+              <h3 id="guest-badge-azienda" class="text-sm font-black uppercase text-white mt-1">-</h3>
+            </div>
+            <span id="guest-badge-id" class="text-xs font-mono font-bold text-amber-400">#CR-000</span>
+          </div>
+
+          <div class="bg-black/70 border-2 border-amber-500/60 rounded-2xl p-3 text-center my-2">
+            <div class="text-[10px] text-gray-400 font-mono uppercase">TARGA VEICOLO</div>
+            <div id="guest-badge-targa" class="text-3xl font-black tracking-widest text-white cornice-targa uppercase">-</div>
+          </div>
+
+          <div class="bg-white p-3 rounded-2xl w-44 h-44 mx-auto my-3 flex items-center justify-center shadow-xl">
+            <div id="guest-box-qrcode"></div>
+          </div>
+
+          <div class="space-y-1.5 text-xs border-t border-gray-800 pt-3">
+            <div class="flex justify-between"><span class="text-gray-400">Parcheggio:</span> <strong id="guest-badge-park" class="text-amber-400">-</strong></div>
+            <div class="flex justify-between"><span class="text-gray-400">Conducente:</span> <span id="guest-badge-conducente" class="text-gray-200 font-semibold">-</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Validità:</span> <span id="guest-badge-validita" class="font-mono text-emerald-400 font-bold">-</span></div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-gray-800 grid grid-cols-3 gap-2">
+            <a id="guest-nav-google" href="#" target="_blank" class="py-2 bg-gray-800 hover:bg-gray-700 text-center rounded-xl text-[11px] font-bold text-white"><i class="fa-solid fa-map-location-dot text-amber-400"></i> Maps</a>
+            <a id="guest-nav-waze" href="#" target="_blank" class="py-2 bg-gray-800 hover:bg-gray-700 text-center rounded-xl text-[11px] font-bold text-white"><i class="fa-brands fa-waze text-sky-400"></i> Waze</a>
+            <a id="guest-nav-apple" href="#" target="_blank" class="py-2 bg-gray-800 hover:bg-gray-700 text-center rounded-xl text-[11px] font-bold text-white"><i class="fa-brands fa-apple text-gray-300"></i> Apple</a>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="scaricaPassClientePDF()" class="py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg">
+            <i class="fa-solid fa-file-pdf"></i> SALVA PDF
+          </button>
+          <button onclick="scaricaPassClientePNG()" class="py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg">
+            <i class="fa-solid fa-image"></i> SALVA IMMAGINE
+          </button>
+        </div>
+      </div>
+
+      <div class="text-center text-[11px] text-gray-500 pt-2 pb-6">
+        Designed by <strong class="text-amber-400">Luca Amati</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- SCHERMATA DI BLOCCO GLOBALE ALL'APERTURA DELLA WEB APP   -->
+  <!-- ======================================================== -->
+  <div id="schermata-blocco-globale" class="fixed inset-0 z-[200] bg-gray-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+    <div class="max-w-sm w-full bg-gray-900 border border-gray-800 rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-2xl shadow-black relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-gray-950 text-2xl font-black shadow-lg shadow-amber-500/30">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-black tracking-wider text-white uppercase">CONTROL ROOM <span class="text-amber-500 text-xs px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">TECNOLOGY</span></h2>
+        <p class="text-xs text-gray-400 mt-1">Accesso Riservato al Personale Autorizzato</p>
+      </div>
+
+      <div class="space-y-3">
+        <div class="text-left">
+          <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1 text-center">Inserisci Password di Accesso</label>
+          <input id="input-password-globale" type="password" placeholder="•••••" maxlength="20" class="w-full text-center bg-gray-950 border-2 border-gray-700 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-amber-500 focus:outline-none">
+        </div>
+        <p class="text-[11px] text-gray-500">Password predefinita iniziale: <span class="text-amber-400 font-mono font-bold">12345</span></p>
+        <button onclick="eseguiSbloccoGlobaleApp()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black rounded-xl text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-unlock-keyhole"></i> ENTRA NEL SISTEMA
+        </button>
+      </div>
+
+      <div class="pt-3 border-t border-gray-800/80 text-[11px] text-gray-500 font-medium">
+        Designed by <strong class="text-amber-400 font-semibold">Luca Amati</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICA TOAST IN-APP (Sostituto moderno e non bloccabile degli alert) -->
+  <div id="toast-notifica" class="fixed top-4 right-4 z-[100] transform -translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold">
+    <i id="toast-icona" class="fa-solid fa-circle-check text-lg"></i>
+    <span id="toast-messaggio">Notifica</span>
+  </div>
+
+  <!-- HEADER APPLICAZIONE -->
+  <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md px-4 py-3 sm:px-6">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-gray-950 shadow-lg shadow-amber-500/20 font-black text-xl">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-black tracking-wider text-white uppercase flex items-center gap-2">
+              CONTROL ROOM <span class="text-amber-500 text-xs px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">TECNOLOGY</span>
+            </h1>
+            <p id="sottotitolo-evento" class="text-xs text-gray-400 font-medium">Gestione Accessi Parcheggi Eventi</p>
+          </div>
+        </div>
+        <!-- Indicatore Operatore Loggato -->
+        <div id="badge-operatore-loggato" class="hidden sm:flex items-center gap-2 bg-gray-800/80 border border-gray-700 rounded-lg px-3 py-1 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="label-operatore-attivo" class="text-gray-300 font-semibold">Operatore: -</span>
+          <button onclick="eseguiLogoutVarco()" class="text-gray-400 hover:text-red-400 ml-1 text-xs" title="Disconnetti operatore">
+            <i class="fa-solid fa-power-off"></i>
+          </button>
+        </div>
+        
+        <!-- Pulsante Blocco Rapido App -->
+        <button onclick="bloccaAppManualmente()" class="px-2.5 py-1.5 bg-gray-800/80 hover:bg-gray-700 text-gray-400 hover:text-amber-400 rounded-lg text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5" title="Blocca App e torna alla schermata iniziale">
+          <i class="fa-solid fa-lock"></i> <span class="hidden md:inline">Blocca</span>
+        </button>
+      </div>
+
+      <!-- NAVIGAZIONE PRINCIPALE -->
+      <nav class="flex items-center gap-1.5 w-full sm:w-auto justify-center bg-gray-950/60 p-1 rounded-xl border border-gray-800 text-xs sm:text-sm font-semibold">
+        <button id="btn-tab-varco" onclick="apriModalLoginVarco()" class="flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 shadow-md font-bold">
+          <i class="fa-solid fa-door-open"></i> VARCO <i class="fa-solid fa-lock text-[10px] ml-0.5 opacity-70"></i>
+        </button>
+        <button id="btn-tab-creapass" onclick="cambiaSchedaPrincipale('creapass')" class="flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-gray-400 hover:text-white">
+          <i class="fa-solid fa-id-card"></i> CREA PASS
+        </button>
+        <button id="btn-tab-admin" onclick="apriModalLoginAdmin()" class="flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-gray-400 hover:text-white">
+          <i class="fa-solid fa-sliders"></i> ADMIN <i class="fa-solid fa-lock text-[10px] ml-0.5 opacity-70"></i>
+        </button>
+        <!-- NUOVO MENU BS SEPARATO DEDICATO ALLA SICUREZZA PASSWORD -->
+        <button id="btn-tab-bs" onclick="apriModalLoginBS()" class="flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-purple-400 hover:text-purple-300 border border-purple-500/20 bg-purple-950/30">
+          <i class="fa-solid fa-shield-halved"></i> BS <i class="fa-solid fa-lock text-[10px] ml-0.5 opacity-70"></i>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- BANNER MONITORAGGIO CAPIENZA MULTI-PARCHEGGIO IN TEMPO REALE -->
+  <section id="pannello-monitoraggio-parcheggi" class="bg-gray-900 border-b border-gray-800 px-4 py-3">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase font-extrabold tracking-wider text-gray-400 flex items-center gap-2">
+          <i class="fa-solid fa-square-parking text-amber-500"></i> Stato Posti & Capienza Tempo Reale
+        </span>
+        <span class="text-[11px] text-gray-500 font-mono" id="data-ora-live">LIVE</span>
+      </div>
+      <!-- CARD PARCHEGGI DINAMICHE -->
+      <div id="container-card-parcheggi" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Popolato via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTENUTO PRINCIPALE -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+
+    <!-- ========================================== -->
+    <!-- SCHEDA 1: VARCO OPERATIVO (ENTRATA/USCITA) -->
+    <!-- ========================================== -->
+    <section id="vista-varco" class="space-y-6">
+      
+      <!-- INFORMAZIONI POSTAZIONE ATTIVA -->
+      <div class="badge-ologramma rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 border-amber-500/20">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <div id="icona-modalita-varco" class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-2xl font-bold">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="badge-tipo-varco" class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">VARCO ENTRATA</span>
+              <span id="varco-attivo-nome" class="font-extrabold text-white text-base">Varco A (Ingresso Nord)</span>
+            </div>
+            <p id="varco-parcheggio-nome" class="text-xs text-amber-400 font-medium mt-0.5">Parcheggio Principale Fiera</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+          <div class="text-right">
+            <div class="text-[11px] text-gray-400">Postazione Configurato da Admin:</div>
+            <div id="info-operatore-postazione" class="text-xs font-bold text-white">Operatore: -</div>
+          </div>
+          <button onclick="eseguiLogoutVarco()" class="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-semibold border border-gray-700 transition-colors flex items-center gap-1.5" title="Disconnetti e chiudi postazione">
+            <i class="fa-solid fa-power-off text-red-400"></i> Esci Varco
+          </button>
+        </div>
+      </div>
+
+      <!-- ZONA SCANSIONE & CONTROLLO TARGA -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- COLONNA CONTROLLO / SCANNER -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- PULSANTE APRI FOTOCAMERA QR -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5">
+            <button id="btn-toggle-camera" onclick="toggleFotocameraScanner()" class="w-full py-4 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-3 text-base sm:text-lg transition-all active:scale-[0.99]">
+              <i class="fa-solid fa-camera text-xl"></i>
+              <span id="testo-btn-camera">ATTIVA FOTOCAMERA PER SCANSIONE QR</span>
+            </button>
+
+            <!-- CONTENITORE VIDEO SCANNER QR -->
+            <div id="box-scanner-fotocamera" class="hidden mt-4 overflow-hidden rounded-2xl border-2 border-emerald-500/40 bg-black relative">
+              <div id="lettore-fotocamera-qr" class="w-full"></div>
+              <div class="p-3 bg-gray-950/90 flex items-center justify-between text-xs text-gray-300 border-t border-gray-800">
+                <span class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  Inquadra il QR Code del Pass
+                </span>
+                <button onclick="interrompiFotocameraScanner()" class="px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white rounded-lg font-bold">
+                  Chiudi Camera
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- VERIFICA MANUALE DA TASTIERA -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 space-y-3">
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Oppure Inserisci Targa Veicolo Manualmente:
+            </label>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-bold text-sm">
+                  🇮🇹
+                </div>
+                <input id="input-targa-manuale" type="text" placeholder="ES: AA123BB" maxlength="12" class="w-full pl-10 pr-4 py-3 bg-gray-950 border border-gray-700 rounded-xl text-white font-black text-xl tracking-widest uppercase focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 placeholder-gray-600">
+              </div>
+              <button onclick="eseguiVerificaTargaManuale()" class="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-gray-950 font-black rounded-xl text-sm sm:text-base flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+                <i class="fa-solid fa-magnifying-glass"></i> VERIFICA
+              </button>
+            </div>
+
+            <!-- Tasti Rapidi Targhe Test -->
+            <div class="pt-2 border-t border-gray-800/80 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
+              <span>Targhe rapide test:</span>
+              <button onclick="impostaTargaRapida('AA123BB')" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-amber-300 rounded font-mono font-bold">AA123BB</button>
+              <button onclick="impostaTargaRapida('CR001RM')" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-amber-300 rounded font-mono font-bold">CR001RM</button>
+              <button onclick="impostaTargaRapida('FE889KL')" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-amber-300 rounded font-mono font-bold">FE889KL</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLONNA ESITO VERIFICA / FEEDBACK VISIVO -->
+        <div class="lg:col-span-5">
+          <div id="box-esito-controllo" class="bg-gray-900 border border-gray-800 rounded-2xl p-6 min-h-[360px] flex flex-col items-center justify-center text-center transition-all">
+            <div class="w-20 h-20 rounded-full bg-gray-800/80 border border-gray-700 flex items-center justify-center text-gray-500 text-3xl mb-4">
+              <i class="fa-solid fa-barcode"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-300 mb-1">IN ATTESA DI SCANSIONE</h3>
+            <p class="text-xs text-gray-500 max-w-xs">
+              Inquadra con la fotocamera il QR Code del pass auto oppure digita la targa per verificare validità, direzione e disponibilità posti.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- LOG ULTIMI TRANSITI AL VARCO -->
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> Ultimi Transiti Rilevati al Varco
+          </h3>
+          <span id="totale-transiti-badge" class="text-xs font-semibold px-2 py-0.5 rounded bg-gray-800 text-gray-300">0 Registrati</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="text-gray-500 uppercase border-b border-gray-800 bg-gray-950/40">
+              <tr>
+                <th class="py-2 px-3">Ora</th>
+                <th class="py-2 px-3">Targa</th>
+                <th class="py-2 px-3">Intestatario</th>
+                <th class="py-2 px-3">Tipo Movimento</th>
+                <th class="py-2 px-3">Varco / Postazione</th>
+                <th class="py-2 px-3 text-right">Esito</th>
+              </tr>
+            </thead>
+            <tbody id="tabella-log-transiti" class="divide-y divide-gray-800/60 font-mono">
+              <tr>
+                <td colspan="6" class="py-4 text-center text-gray-600 font-sans">Nessun transito registrato in questa sessione.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SCHEDA 2: CREA NUOVO PASS CON GEOLOCALIZ. -->
+    <!-- ========================================== -->
+    <section id="vista-creapass" class="hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- FORM CREAZIONE PASS -->
+        <div class="lg:col-span-6 bg-gray-900 border border-gray-800 rounded-2xl p-5 sm:p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+            <h2 class="text-base font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-id-card text-amber-500"></i> Emissione Pass Veicolo
+            </h2>
+            <span class="text-xs text-gray-400 font-medium">Ufficiale Autorizzato</span>
+          </div>
+
+          <!-- SELEZIONE PARCHEGGIO ASSEGNATO -->
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Parcheggio Assegnato *</span>
+              <span class="text-[10px] text-amber-400 font-normal">Configurato da Amministrazione</span>
+            </label>
+            <select id="form-pass-parcheggio" onchange="aggiornaDettagliParcheggioSelezionatoForm()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none">
+              <!-- Popolato dinamicamente da JS -->
+            </select>
+            <div id="info-geoloc-anteprima" class="mt-1.5 text-xs text-gray-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-location-dot text-amber-500"></i>
+              <span id="form-pass-indirizzo-label">-</span>
+            </div>
+          </div>
+
+          <!-- TARGA AUTO -->
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+              Targa Veicolo *
+            </label>
+            <input id="form-pass-targa" type="text" placeholder="ES: AA123BB" maxlength="10" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white font-black text-lg tracking-widest uppercase focus:border-amber-500 focus:outline-none">
+          </div>
+
+          <!-- NOME E AZIENDA -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Nome e Cognome *
+              </label>
+              <input id="form-pass-nome" type="text" placeholder="Mario Rossi" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Azienda / Ente / Ruolo
+              </label>
+              <input id="form-pass-azienda" type="text" placeholder="Fiera Staff / VIP" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- RECAPITI -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Cellulare per WhatsApp
+              </label>
+              <input id="form-pass-telefono" type="tel" placeholder="+39 340 0000000" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Email Ricevente
+              </label>
+              <input id="form-pass-email" type="email" placeholder="ospite@evento.it" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- DATE DI VALIDITA' -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Valido Dal (Inizio) *
+              </label>
+              <input id="form-pass-data-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Valido Al (Fine) *
+              </label>
+              <input id="form-pass-data-a" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- PULSANTE GENERA PASS -->
+          <button onclick="eseguiGenerazionePass()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black rounded-xl text-base shadow-lg shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-qrcode"></i> GENERA QR PASS UFFICIALE
+          </button>
+        </div>
+
+        <!-- ANTEPRIMA BADGE GRAFICO DEL PASS CON AZIONI -->
+        <div class="lg:col-span-6 space-y-4">
+          
+          <div id="contenitore-badge-pass" class="badge-ologramma rounded-3xl p-6 border-2 border-amber-500/30 relative overflow-hidden bg-gradient-to-b from-gray-900/90 to-gray-950/95 text-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
+              <div>
+                <span class="text-[10px] uppercase font-black tracking-widest text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">PASS ACCESSO UFFICIALE</span>
+                <h3 id="badge-pass-evento" class="text-sm font-black uppercase text-white mt-1">FIERA & PALASPORT</h3>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] text-gray-400 block font-mono">ID PASS</span>
+                <span id="badge-pass-codice" class="text-xs font-mono font-bold text-amber-400">#CR-000000</span>
+              </div>
+            </div>
+
+            <!-- TARGA -->
+            <div class="bg-black/70 border-2 border-amber-500/60 rounded-2xl p-4 text-center my-3 shadow-inner">
+              <div class="text-[10px] text-gray-400 font-mono uppercase tracking-widest mb-0.5">TARGA AUTORIZZATA</div>
+              <div id="badge-pass-targa" class="text-3xl sm:text-4xl font-black tracking-widest text-white cornice-targa uppercase">
+                AA 000 BB
+              </div>
+            </div>
+
+            <!-- QR CODE CENTRALE -->
+            <div class="bg-white p-3.5 rounded-2xl w-48 h-48 mx-auto my-4 flex items-center justify-center shadow-xl">
+              <div id="box-visuale-qrcode" class="w-full h-full flex items-center justify-center"></div>
+            </div>
+
+            <!-- DETTAGLI PARCHEGGIO & INTESTATARIO -->
+            <div class="space-y-2 text-xs border-t border-gray-800/80 pt-3">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Parcheggio Riservato:</span>
+                <span id="badge-pass-parcheggio" class="font-bold text-amber-400 text-sm">PARCHEGGIO FIERA EST</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Indirizzo:</span>
+                <span id="badge-pass-indirizzo" class="font-medium text-gray-200 text-right truncate max-w-[200px]">-</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Intestatario:</span>
+                <span id="badge-pass-intestatario" class="font-semibold text-gray-200">Mario Rossi</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-400">Periodo di Validità:</span>
+                <span id="badge-pass-validita" class="font-mono text-emerald-400 font-bold">23/10/2026 - 24/10/2026</span>
+              </div>
+            </div>
+
+            <!-- LINK NAVIGATORE MAPPE -->
+            <div class="mt-4 pt-3 border-t border-gray-800/80">
+              <div class="text-[10px] uppercase font-bold text-gray-400 mb-2 text-center">Navigazione Diretta al Parcheggio Assegnato:</div>
+              <div class="grid grid-cols-3 gap-2">
+                <a id="link-nav-google" href="#" target="_blank" class="py-2 px-2 bg-gray-800/80 hover:bg-gray-700 text-center rounded-xl text-[11px] font-bold text-white border border-gray-700 flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-map-location-dot text-amber-400"></i> Maps
+                </a>
+                <a id="link-nav-waze" href="#" target="_blank" class="py-2 px-2 bg-gray-800/80 hover:bg-gray-700 text-center rounded-xl text-[11px] font-bold text-white border border-gray-700 flex items-center justify-center gap-1">
+                  <i class="fa-brands fa-waze text-sky-400"></i> Waze
+                </a>
+                <a id="link-nav-apple" href="#" target="_blank" class="py-2 px-2 bg-gray-800/80 hover:bg-gray-700 text-center rounded-xl text-[11px] font-bold text-white border border-gray-700 flex items-center justify-center gap-1">
+                  <i class="fa-brands fa-apple text-gray-300"></i> Apple
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- PULSANTI SALVARE IL FILE GRAFICO & CONDIVISIONE INFO -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-3">
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-download text-amber-500"></i> 1. Salva File Grafico con QR Code:
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button onclick="scaricaPassInPDF()" class="py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-file-pdf"></i> SCARICA IN PDF
+              </button>
+              <button onclick="scaricaPassInPNG()" class="py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-image"></i> SCARICA IN PNG (FOTO)
+              </button>
+            </div>
+
+            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2 border-t border-gray-800 flex items-center gap-2">
+              <i class="fa-solid fa-paper-plane text-amber-500"></i> 2. Invia Info & Navigazione:
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button onclick="inviaPassSuWhatsApp()" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-brands fa-whatsapp text-sm"></i> INVIA WHATSAPP
+              </button>
+              <button onclick="inviaPassPerEmail()" class="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-envelope text-sm"></i> INVIA EMAIL
+              </button>
+            </div>
+            <p class="text-[11px] text-gray-400 text-center">
+              💡 <em>Scarica il PDF o l'immagine per allegare il QR Code al messaggio dell'ospite.</em>
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SCHEDA 3: AMMINISTRAZIONE MULTI-LIVELLO   -->
+    <!-- ========================================== -->
+    <section id="vista-amministrazione" class="hidden space-y-6">
+      
+      <!-- SUBMENU ADMIN -->
+      <div class="flex flex-wrap gap-2 border-b border-gray-800 pb-3">
+        <button id="btn-sub-parcheggi" onclick="cambiaSubmenuAdmin('parcheggi')" class="px-4 py-2 bg-amber-500 text-gray-950 font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow">
+          <i class="fa-solid fa-square-parking"></i> PARCHEGGI & VARCHI
+        </button>
+        <button id="btn-sub-operatori" onclick="cambiaSubmenuAdmin('operatori')" class="px-4 py-2 bg-gray-800 text-gray-300 hover:text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2">
+          <i class="fa-solid fa-users-gear"></i> OPERATORI (LUCA, MARCO, ECC.)
+        </button>
+        <button id="btn-sub-inviti" onclick="cambiaSubmenuAdmin('inviti')" class="px-4 py-2 bg-gray-800 text-gray-300 hover:text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2">
+          <i class="fa-solid fa-link"></i> LINK INVITI CLIENTI
+        </button>
+        <button id="btn-sub-anagrafica" onclick="cambiaSubmenuAdmin('anagrafica')" class="px-4 py-2 bg-gray-800 text-gray-300 hover:text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2">
+          <i class="fa-solid fa-database"></i> REGISTRO PASS
+        </button>
+      </div>
+      <!-- SUB-SCHEDA B2: GENERATORE LINK PERSONALIZZATI PER CLIENTI -->
+      <div id="subsezione-inviti" class="hidden space-y-6">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 sm:p-6 space-y-4">
+          <div class="border-b border-gray-800 pb-3">
+            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i class="fa-solid fa-link text-amber-500"></i> Genera Link Personalizzato per Cliente / Azienda
+            </h3>
+            <p class="text-xs text-gray-400 mt-1">
+              Preimposta il nome dell'azienda/cliente, il parcheggio riservato e le date esatte. Il cliente aprirà il link già configurato (con date non modificabili) e dovrà solo inserire la propria targa.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-bold text-gray-400 uppercase mb-1">Nome Cliente / Azienda *</label>
+              <input id="invito-cliente-nome" type="text" placeholder="Es: Azienda Mario Rossi / Giorgio Bianchi" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato *</label>
+              <select id="invito-cliente-parcheggio" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+                <!-- Popolato da JS -->
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-400 uppercase mb-1">Data Inizio Validità *</label>
+              <input id="invito-cliente-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-400 uppercase mb-1">Data Fine Validità *</label>
+              <input id="invito-cliente-a" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <button onclick="generaLinkPersonalizzatoCliente()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black rounded-xl text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> CREA LINK PERSONALIZZATO PER QUESTO CLIENTE
+          </button>
+
+          <!-- Box Risultato Link Generato -->
+          <div id="box-risultato-link-invito" class="hidden bg-gray-950 border border-amber-500/40 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-400 uppercase">Link Pronto per <span id="label-destinatario-link" class="text-white underline">-</span>:</span>
+              <span id="label-date-link" class="text-[11px] font-mono text-emerald-400">-</span>
+            </div>
+            <div class="flex gap-2">
+              <input id="output-url-invito-cliente" type="text" readonly class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-300 font-mono select-all">
+              <button onclick="copiaLinkInvitoNegliAppunti()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-copy"></i> Copia
+              </button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <button onclick="condividiLinkInvitoWhatsApp()" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+                <i class="fa-brands fa-whatsapp text-sm"></i> Invia Link su WhatsApp
+              </button>
+              <button onclick="condividiLinkInvitoEmail()" class="py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+                <i class="fa-solid fa-envelope text-sm"></i> Invia Link via Email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-SCHEDA C: REGISTRO ANAGRAFICA COMPLETO PASS -->
+      <div id="subsezione-anagrafica" class="hidden space-y-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-amber-500"></i> Registro Pass Emessi
+            </h3>
+            <div class="flex gap-2">
+              <button onclick="esportaPassInCSV()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold">
+                <i class="fa-solid fa-file-csv"></i> Esporta CSV
+              </button>
+              <button onclick="svuotaRegistroPass()" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/70 text-red-300 rounded-lg text-xs font-semibold">
+                <i class="fa-solid fa-trash"></i> Cancella Tutti
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="text-gray-500 uppercase border-b border-gray-800 bg-gray-950/40">
+                <tr>
+                  <th class="py-2 px-3">Targa</th>
+                  <th class="py-2 px-3">Intestatario</th>
+                  <th class="py-2 px-3">Parcheggio</th>
+                  <th class="py-2 px-3">Validità</th>
+                  <th class="py-2 px-3">Stato Attuale</th>
+                  <th class="py-2 px-3 text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="tabella-anagrafica-pass" class="divide-y divide-gray-800/60 font-mono">
+                <!-- Popolato da JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SCHEDA 4: SEZIONE BS (SICUREZZA & PASSWORD) -->
+    <!-- ========================================== -->
+    <section id="vista-bs" class="hidden space-y-6">
+      <div class="bg-gradient-to-br from-gray-900 via-gray-950 to-purple-950/40 border border-purple-500/30 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto shadow-2xl relative overflow-hidden">
+        <div class="absolute -top-16 -right-16 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex items-center gap-3.5 border-b border-gray-800/80 pb-4 mb-6">
+          <div class="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/40 text-purple-400 flex items-center justify-center text-xl font-black">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+              CONSOLLE BS <span class="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">SICUREZZA CHIAVI</span>
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">Gestione separata e riservata di tutte le password del sistema</p>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Password Globale Apertura App -->
+          <div class="bg-gray-950/60 border border-gray-800 rounded-2xl p-4">
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>1. Password Globale Apertura Web App</span>
+              <span class="text-[10px] text-purple-400 lowercase font-normal">schermata iniziale</span>
+            </label>
+            <p class="text-[11px] text-gray-500 mb-2">La chiave richiesta per sbloccare l'applicazione all'avvio su qualsiasi dispositivo.</p>
+            <div class="relative">
+              <input id="input-bs-pwd-globale" type="text" placeholder="12345" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-amber-400 font-mono text-sm tracking-wider focus:border-purple-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Password Master Varco -->
+          <div class="bg-gray-950/60 border border-gray-800 rounded-2xl p-4">
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>2. Password Master Postazione Varco</span>
+              <span class="text-[10px] text-purple-400 lowercase font-normal">bypass pin operatore</span>
+            </label>
+            <p class="text-[11px] text-gray-500 mb-2">Permette l'accesso rapido a qualsiasi Varco senza inserire il PIN personale di un operatore.</p>
+            <div class="relative">
+              <input id="input-bs-pwd-varco" type="text" placeholder="12345" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-amber-400 font-mono text-sm tracking-wider focus:border-purple-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Password Area Amministrazione -->
+          <div class="bg-gray-950/60 border border-gray-800 rounded-2xl p-4">
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>3. Password Accesso Admin</span>
+              <span class="text-[10px] text-purple-400 lowercase font-normal">gestione logistica</span>
+            </label>
+            <p class="text-[11px] text-gray-500 mb-2">Protegge l'ingresso al menu Amministrazione (Parcheggi, Varchi, Operatori e Registro Pass).</p>
+            <div class="relative">
+              <input id="input-bs-pwd-admin" type="text" placeholder="12345" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-amber-400 font-mono text-sm tracking-wider focus:border-purple-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Password di questo menu BS -->
+          <div class="bg-gray-950/60 border border-gray-800 rounded-2xl p-4">
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>4. Password Riservata Menu BS</span>
+              <span class="text-[10px] text-purple-400 lowercase font-normal">sicurezza massima</span>
+            </label>
+            <p class="text-[11px] text-gray-500 mb-2">La chiave esclusiva necessaria per entrare in questo menu di configurazione password.</p>
+            <div class="relative">
+              <input id="input-bs-pwd-bs" type="text" placeholder="12345" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-purple-300 font-mono text-sm tracking-wider focus:border-purple-500 focus:outline-none">
+            </div>
+          </div>
+
+          <button onclick="salvaTutteLePasswordBS()" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-xl text-sm uppercase tracking-wider shadow-lg shadow-purple-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-4">
+            <i class="fa-solid fa-floppy-disk"></i> SALVA TUTTE LE CHIAVI DI SICUREZZA
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- FOOTER PERSISTENTE IN TUTTE LE SCHERMATE                 -->
+  <!-- ======================================================== -->
+  <footer class="mt-auto border-t border-gray-900 bg-gray-950/80 py-4 px-4 text-center">
+    <div class="max-w-7xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500 font-medium tracking-wide">
+      <span>Designed by <strong class="text-amber-400 font-semibold tracking-wider">Luca Amati</strong></span>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: LOGIN ACCESSO ADMIN (INTEGRATO IN-PAGE)          -->
+  <!-- ======================================================== -->
+  <div id="modal-login-admin" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-2xl font-bold">
+        <i class="fa-solid fa-sliders"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-black text-white uppercase tracking-wider">Accesso Amministrazione</h3>
+        <p class="text-xs text-gray-400 mt-1">Inserisci la password Admin (predefinita: <span class="font-mono text-amber-400 font-bold">12345</span>)</p>
+      </div>
+      <div>
+        <input id="input-login-admin-pwd" type="password" placeholder="•••••" maxlength="20" class="w-full text-center bg-gray-950 border-2 border-gray-700 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-amber-500 focus:outline-none">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalLoginAdmin()" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaLoginAdminModal()" class="w-1/2 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black rounded-xl text-xs shadow-lg shadow-amber-500/20">ACCEDI ADMIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: LOGIN ACCESSO MENU BS (INTEGRATO IN-PAGE)        -->
+  <!-- ======================================================== -->
+  <div id="modal-login-bs" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-purple-500/40 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-purple-600/20 border border-purple-500/40 text-purple-400 flex items-center justify-center text-2xl font-bold">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-black text-white uppercase tracking-wider">Accesso Riservato BS</h3>
+        <p class="text-xs text-gray-400 mt-1">Inserisci la password di sicurezza BS (predefinita: <span class="font-mono text-purple-400 font-bold">12345</span>)</p>
+      </div>
+      <div>
+        <input id="input-login-bs-pwd" type="password" placeholder="•••••" maxlength="20" class="w-full text-center bg-gray-950 border-2 border-purple-500/40 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-purple-400 focus:outline-none">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalLoginBS()" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaLoginBSModal()" class="w-1/2 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-xl text-xs shadow-lg shadow-purple-600/20">ACCEDI BS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: LOGIN ACCESSO VARCO (INTEGRATO IN-PAGE)          -->
+  <!-- ======================================================== -->
+  <div id="modal-login-varco" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-2xl font-bold">
+        <i class="fa-solid fa-door-open"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-black text-white uppercase tracking-wider">Accesso Postazione Varco</h3>
+        <p class="text-xs text-gray-400 mt-1">Digita il tuo PIN Personale operatore o la Password Master</p>
+      </div>
+      <div>
+        <input id="input-login-varco-pin" type="password" placeholder="PIN Operatore" maxlength="15" class="w-full text-center bg-gray-950 border-2 border-gray-700 rounded-2xl px-4 py-3 text-white font-black text-2xl tracking-widest focus:border-amber-500 focus:outline-none">
+      </div>
+      <div class="flex flex-wrap justify-center gap-1.5 text-[11px] text-gray-500 pt-1">
+        <span>PIN rapidi test:</span>
+        <button onclick="document.getElementById('input-login-varco-pin').value='1101';confermaLoginVarcoModal();" class="text-amber-400 hover:underline font-mono">1101 (Luca)</button>
+        <span>•</span>
+        <button onclick="document.getElementById('input-login-varco-pin').value='1102';confermaLoginVarcoModal();" class="text-amber-400 hover:underline font-mono">1102 (Marco)</button>
+        <span>•</span>
+        <button onclick="document.getElementById('input-login-varco-pin').value='12345';confermaLoginVarcoModal();" class="text-amber-400 hover:underline font-mono">12345 (Master)</button>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalLoginVarco()" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaLoginVarcoModal()" class="w-1/2 py-3 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-black rounded-xl text-xs shadow-lg shadow-emerald-500/20">APRI VARCO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: AGGIUNGI / MODIFICA PARCHEGGIO                    -->
+  <!-- ======================================================== -->
+  <div id="modal-parcheggio" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+          <i class="fa-solid fa-square-parking text-amber-500"></i> Configura Parcheggio
+        </h3>
+        <button onclick="chiudiModalParcheggio()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Nome Parcheggio *</label>
+          <input id="modal-p-nome" type="text" placeholder="Es: Fiera Rimini Nord" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Capienza Totale Posti Auto *</label>
+          <input id="modal-p-capienza" type="number" min="1" placeholder="Es: 400" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Indirizzo Stradale Completo *</label>
+          <input id="modal-p-indirizzo" type="text" placeholder="Es: Via Emilia 155, Rimini" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Coordinate GPS (Lat, Long)</label>
+          <input id="modal-p-coordinate" type="text" placeholder="Es: 44.0722,12.5255" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm font-mono">
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalParcheggio()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="salvaNuovoParcheggioModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Salva Parcheggio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: AGGIUNGI VARCO AL PARCHEGGIO                      -->
+  <!-- ======================================================== -->
+  <div id="modal-varco" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+          <i class="fa-solid fa-door-open text-amber-500"></i> Aggiungi Nuovo Varco
+        </h3>
+        <button onclick="chiudiModalVarco()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <input type="hidden" id="modal-v-parcheggio-id">
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Nome del Varco *</label>
+          <input id="modal-v-nome" type="text" placeholder="Es: Varco A, Varco B, Cancello Ovest" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Direzione / Funzione *</label>
+          <select id="modal-v-direzione" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <option value="ENTRATA">🟢 ENTRATA (Incrementa auto presenti / Scala posti)</option>
+            <option value="USCITA">🔴 USCITA (Veicolo esce / Libera posti residui)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalVarco()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaAggiungiVarcoModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Aggiungi Varco</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: AGGIUNGI OPERATORE                               -->
+  <!-- ======================================================== -->
+  <div id="modal-operatore" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-amber-500"></i> Nuovo Operatore di Controllo
+        </h3>
+        <button onclick="chiudiModalOperatore()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Nome Operatore *</label>
+          <input id="modal-op-nome" type="text" placeholder="Es: Luca, Marco, Matteo, Roberto" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">PIN Personale di Accesso (4-6 cifre) *</label>
+          <input id="modal-op-pin" type="text" placeholder="Es: 1101, 2202, 3303" maxlength="8" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white font-mono text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato *</label>
+          <select id="modal-op-parcheggio" onchange="aggiornaTendinaVarchiModalOperatore()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <!-- Popolato da JS -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Varco & Direzione Assegnata *</label>
+          <select id="modal-op-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <!-- Popolato da JS -->
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalOperatore()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaSalvaOperatoreModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Crea Operatore</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: MODIFICA / RIASSEGNA VARCO OPERATORE DA ADMIN     -->
+  <!-- ======================================================== -->
+  <div id="modal-modifica-operatore" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+          <i class="fa-solid fa-arrows-rotate text-amber-500"></i> Riassegna Varco Operatore
+        </h3>
+        <button onclick="chiudiModalModificaOperatore()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <input type="hidden" id="modal-edit-op-id">
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Nome Operatore</label>
+          <input id="modal-edit-op-nome" type="text" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">PIN Personale</label>
+          <input id="modal-edit-op-pin" type="text" maxlength="8" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white font-mono text-sm">
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato</label>
+          <select id="modal-edit-op-parcheggio" onchange="aggiornaTendinaVarchiModalModifica()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <!-- Popolato da JS -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Assegna Varco & Funzione *</label>
+          <select id="modal-edit-op-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <!-- Popolato da JS -->
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalModificaOperatore()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaAggiornaOperatoreModal()" class="w-1/2 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs">Salva Assegnazione</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CAMBIA PARCHEGGIO RAPIDO OPERATORE DA ADMIN       -->
+  <!-- ======================================================== -->
+  <div id="modal-cambia-parcheggio-op" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+          <i class="fa-solid fa-square-parking text-sky-400"></i> Sposta Operatore ad Altro Parcheggio
+        </h3>
+        <button onclick="chiudiModalCambiaParcheggioOp()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <input type="hidden" id="modal-cp-op-id">
+      <div class="space-y-3 text-xs">
+        <div class="bg-gray-950/70 border border-gray-800 p-3 rounded-xl flex items-center justify-between">
+          <div>
+            <span class="text-[10px] text-gray-500 uppercase font-bold block">Operatore Selezionato:</span>
+            <span id="modal-cp-op-nome-badge" class="font-extrabold text-sm text-white">Luca</span>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-gray-500 uppercase font-bold block">Parcheggio Attuale:</span>
+            <span id="modal-cp-op-park-attuale" class="text-xs text-amber-400 font-semibold">-</span>
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Seleziona Nuovo Parcheggio *</label>
+          <select id="modal-cp-nuovo-parcheggio" onchange="aggiornaTendinaVarchiModalCambiaParcheggio()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:border-sky-500 focus:outline-none">
+            <!-- Popolato dinamicamente da JS con i parcheggi esistenti -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-gray-400 uppercase mb-1">Seleziona Varco nel Nuovo Parcheggio *</label>
+          <select id="modal-cp-nuovo-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:border-sky-500 focus:outline-none">
+            <!-- Popolato dinamicamente in base al parcheggio selezionato -->
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalCambiaParcheggioOp()" class="w-1/2 py-2.5 bg-gray-800 text-gray-300 font-bold rounded-xl text-xs">Annulla</button>
+        <button onclick="confermaCambiaParcheggioOpModal()" class="w-1/2 py-2.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-gray-950 font-black rounded-xl text-xs shadow-md shadow-sky-500/20">Salva Nuovo Parcheggio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- JAVASCRIPT: LOGICA DI GESTIONE APPLICAZIONE COMPLETA     -->
+  <!-- ======================================================== -->
+  <script>
+    // Database locale
+    let stato = {
+      config: {
+        pwdGlobaleApp: '12345',
+        pwdMasterVarco: '12345',
+        pwdMasterAdmin: '12345',
+        pwdMasterBS: '12345',
+        nomeEvento: 'FIERA & PALASPORT'
+      },
+      appSbloccata: false,
+      parcheggi: [
+        {
+          id: 'PARK-1',
+          nome: 'Parcheggio Principale',
+          capienza: 300,
+          presenti: 120,
+          indirizzo: 'Via Emilia 155',
+          coords: '44.0722,12.5255',
+          varchi: [
+            { id: 'V-101', nome: 'Varco Entrata A', direzione: 'ENTRATA', attivo: true },
+            { id: 'V-102', nome: 'Varco Entrata B', direzione: 'ENTRATA', attivo: true },
+            { id: 'V-103', nome: 'Varco Uscita B', direzione: 'USCITA', attivo: true },
+            { id: 'V-104', nome: 'Varco Uscita C', direzione: 'USCITA', attivo: true }
+          ]
+        },
+        {
+          id: 'PARK-2',
+          nome: 'Parcheggio VIP',
+          capienza: 150,
+          presenti: 45,
+          indirizzo: 'Via della Fiera 23',
+          coords: '44.0505,12.5620',
+          varchi: [
+            { id: 'V-201', nome: 'Varco Entrata 1 (Sud)', direzione: 'ENTRATA', attivo: true },
+            { id: 'V-202', nome: 'Varco Uscita 1 (Ovest)', direzione: 'USCITA', attivo: true }
+          ]
+        }
+      ],
+      operatori: [
+        { id: 'OP-1', nome: 'Luca', pin: '1101', parcheggioId: 'PARK-1', varcoId: 'V-101' },
+        { id: 'OP-2', nome: 'Marco', pin: '1102', parcheggioId: 'PARK-1', varcoId: 'V-102' },
+        { id: 'OP-3', nome: 'Matteo', pin: '2201', parcheggioId: 'PARK-1', varcoId: 'V-103' },
+        { id: 'OP-4', nome: 'Roberto', pin: '2202', parcheggioId: 'PARK-1', varcoId: 'V-104' }
+      ],
+      passRegistrati: [
+        {
+          id: 'PASS-1001',
+          targa: 'AA123BB',
+          nome: 'Mario Rossi',
+          azienda: 'Staff Organizzazione',
+          parcheggioId: 'PARK-1',
+          dataDa: '2026-10-20',
+          dataA: '2026-10-30',
+          telefono: '+393400000000',
+          email: 'mario.rossi@email.it',
+          statoVeicolo: 'ESTERNO'
+        },
+        {
+          id: 'PASS-1002',
+          targa: 'CR001RM',
+          nome: 'Elena Bianchi',
+          azienda: 'Relatore Convegno VIP',
+          parcheggioId: 'PARK-2',
+          dataDa: '2026-10-20',
+          dataA: '2026-10-30',
+          telefono: '+393450000000',
+          email: 'elena.b@email.it',
+          statoVeicolo: 'ESTERNO'
+        },
+        {
+          id: 'PASS-1003',
+          targa: 'FE889KL',
+          nome: 'Fabio Neri',
+          azienda: 'Fornitore Service Audio',
+          parcheggioId: 'PARK-1',
+          dataDa: '2026-10-20',
+          dataA: '2026-10-30',
+          telefono: '+393470000000',
+          email: 'fabio.neri@email.it',
+          statoVeicolo: 'ESTERNO'
+        }
+      ],
+      logTransiti: [],
+      sessioneVarco: {
+        autenticato: false,
+        isMaster: false,
+        operatore: null,
+        parcheggio: null,
+        varco: null
+      },
+      amministrazioneAutenticata: false,
+      bsAutenticato: false
+    };
+
+    let html5QrScannerInstance = null;
+    let fotocameraInUso = false;
+    let synthTone = null;
+    let timerToast = null;
+
+    // Feedback Notifiche Toast in-app
+    function mostraNotifica(messaggio, tipo = 'success') {
+      const toast = document.getElementById('toast-notifica');
+      const msg = document.getElementById('toast-messaggio');
+      const ico = document.getElementById('toast-icona');
+      if (!toast) return;
+
+      if (timerToast) clearTimeout(timerToast);
+      msg.innerText = messaggio;
+
+      if (tipo === 'success') {
+        toast.className = "fixed top-4 right-4 z-[100] transition-all duration-300 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold bg-emerald-950 border-emerald-500 text-emerald-200";
+        ico.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+      } else if (tipo === 'error') {
+        toast.className = "fixed top-4 right-4 z-[100] transition-all duration-300 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold bg-red-950 border-red-500 text-red-200";
+        ico.className = "fa-solid fa-circle-xmark text-red-400 text-lg";
+      } else {
+        toast.className = "fixed top-4 right-4 z-[100] transition-all duration-300 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold bg-amber-950 border-amber-500 text-amber-200";
+        ico.className = "fa-solid fa-triangle-exclamation text-amber-400 text-lg";
+      }
+
+      toast.classList.remove('-translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      timerToast = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    // Persistenza
+    function caricaDatiDaStorage() {
+      try {
+        const salvati = localStorage.getItem('controlroom_rimini_data_v6');
+        if (salvati) {
+          const parsed = JSON.parse(salvati);
+          stato.config = { ...stato.config, ...parsed.config };
+          if (parsed.parcheggi && parsed.parcheggi.length) stato.parcheggi = parsed.parcheggi;
+          if (parsed.operatori && parsed.operatori.length) stato.operatori = parsed.operatori;
+          if (parsed.passRegistrati && parsed.passRegistrati.length) stato.passRegistrati = parsed.passRegistrati;
+          if (parsed.logTransiti) stato.logTransiti = parsed.logTransiti;
+        }
+      } catch (err) {
+        console.warn('Errore lettura localStorage:', err);
+      }
+    }
+
+    function salvaDatiInStorage() {
+      try {
+        localStorage.setItem('controlroom_rimini_data_v6', JSON.stringify({
+          config: stato.config,
+          parcheggi: stato.parcheggi,
+          operatori: stato.operatori,
+          passRegistrati: stato.passRegistrati,
+          logTransiti: stato.logTransiti
+        }));
+      } catch (err) {
+        console.warn('Errore salvataggio localStorage:', err);
+      }
+    }
+
+    window.onload = function() {
+      caricaDatiDaStorage();
+      
+      // Verifica se la pagina è stata aperta tramite un link invito cliente (?invite=...)
+      if (verificaEApriModalitaInvitoCliente()) {
+        return;
+      }
+
+      impostaDateDefaultFormPass();
+      aggiornaMonitoraggioParcheggi();
+      aggiornaSelettoreParcheggiCreaPass();
+      renderizzaTabellaLog();
+      renderizzaRegistroPassAnagrafica();
+      renderizzaTuttoAdmin();
+
+      // Controllo schermata blocco globale
+      const lockScreen = document.getElementById('schermata-blocco-globale');
+      const inputPassGlobale = document.getElementById('input-password-globale');
+      if (stato.appSbloccata) {
+        if (lockScreen) lockScreen.classList.add('hidden');
+      } else {
+        if (lockScreen) lockScreen.classList.remove('hidden');
+        setTimeout(() => { if (inputPassGlobale) inputPassGlobale.focus(); }, 100);
+      }
+
+      if (inputPassGlobale) {
+        inputPassGlobale.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') eseguiSbloccoGlobaleApp();
+        });
+      }
+
+      setInterval(() => {
+        const oraElem = document.getElementById('data-ora-live');
+        if (oraElem) oraElem.innerText = new Date().toLocaleTimeString('it-IT');
+      }, 1000);
+
+      const inTarga = document.getElementById('input-targa-manuale');
+      if (inTarga) {
+        inTarga.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') eseguiVerificaTargaManuale();
+        });
+      }
+
+      // Enter key sui modali login
+      const inPwdAdmin = document.getElementById('input-login-admin-pwd');
+      if (inPwdAdmin) {
+        inPwdAdmin.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') confermaLoginAdminModal();
+        });
+      }
+      const inPinVarco = document.getElementById('input-login-varco-pin');
+      if (inPinVarco) {
+        inPinVarco.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') confermaLoginVarcoModal();
+        });
+      }
+      const inPwdBS = document.getElementById('input-login-bs-pwd');
+      if (inPwdBS) {
+        inPwdBS.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') confermaLoginBSModal();
+        });
+      }
+    };
+
+    function emettiSuonoFeedback(tipo) {
+      try {
+        if (!synthTone) synthTone = new Tone.Synth().toDestination();
+        if (Tone.context.state !== 'running') {
+          Tone.start();
+        }
+        const now = Tone.now() + 0.01;
+        if (tipo === 'success') {
+          synthTone.triggerAttackRelease('C5', '0.1', now);
+          synthTone.triggerAttackRelease('G5', '0.2', now + 0.13);
+        } else if (tipo === 'exit') {
+          synthTone.triggerAttackRelease('A4', '0.15', now);
+        } else if (tipo === 'warning') {
+          synthTone.triggerAttackRelease('E4', '0.2', now);
+        } else {
+          synthTone.triggerAttackRelease('F3', '0.3', now);
+        }
+      } catch (e) {}
+    }
+
+    function aggiornaMonitoraggioParcheggi() {
+      const container = document.getElementById('container-card-parcheggi');
+      if (!container) return;
+      container.innerHTML = '';
+
+      stato.parcheggi.forEach(p => {
+        const postiResidui = Math.max(0, p.capienza - p.presenti);
+        const percentuale = Math.min(100, Math.round((p.presenti / p.capienza) * 100));
+        
+        let statoColore = 'emerald';
+        let etichettaStato = 'DISPONIBILE';
+        if (percentuale >= 95) {
+          statoColore = 'red';
+          etichettaStato = 'COMPLETO';
+        } else if (percentuale >= 80) {
+          statoColore = 'amber';
+          etichettaStato = 'QUASI PIENO';
+        }
+
+        const varchiAttivi = p.varchi.filter(v => v.attivo).length;
+
+        const card = document.createElement('div');
+        card.className = `bg-gray-950/70 border border-gray-800 rounded-xl p-3.5 relative overflow-hidden`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-extrabold text-xs text-white uppercase truncate max-w-[170px]" title="${p.nome}">
+              ${p.nome}
+            </span>
+            <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-${statoColore}-500/20 text-${statoColore}-400 border border-${statoColore}-500/30">
+              ${etichettaStato}
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center my-2">
+            <div class="bg-gray-900 rounded-lg p-1.5 border border-gray-800">
+              <span class="text-[10px] text-gray-400 block">Posti Residui</span>
+              <span class="text-xl font-black text-${statoColore}-400">${postiResidui}</span>
+            </div>
+            <div class="bg-gray-900 rounded-lg p-1.5 border border-gray-800">
+              <span class="text-[10px] text-gray-400 block">Auto Dentro</span>
+              <span class="text-xl font-black text-gray-200">${p.presenti} <span class="text-[10px] text-gray-500 font-normal">/ ${p.capienza}</span></span>
+            </div>
+          </div>
+          <div class="w-full bg-gray-800 rounded-full h-1.5 mt-2 overflow-hidden">
+            <div class="bg-${statoColore}-500 h-1.5 rounded-full transition-all duration-500" style="width: ${percentuale}%"></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-gray-500 mt-1.5">
+            <span>Occupazione: ${percentuale}%</span>
+            <span>Varchi attivi: ${varchiAttivi}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // MODAL LOGIN VARCO (In-Page, affidabile al 100%)
+    function apriModalLoginVarco() {
+      if (stato.sessioneVarco.autenticato) {
+        cambiaSchedaPrincipale('varco');
+        return;
+      }
+      const input = document.getElementById('input-login-varco-pin');
+      if (input) input.value = '';
+      document.getElementById('modal-login-varco').classList.remove('hidden');
+      setTimeout(() => { if (input) input.focus(); }, 100);
+    }
+
+    function chiudiModalLoginVarco() {
+      document.getElementById('modal-login-varco').classList.add('hidden');
+    }
+
+    function confermaLoginVarcoModal() {
+      const pinInserito = document.getElementById('input-login-varco-pin').value.trim();
+      if (!pinInserito) return;
+
+      const op = stato.operatori.find(o => o.pin === pinInserito);
+      if (op) {
+        const park = stato.parcheggi.find(p => p.id === op.parcheggioId);
+        const varco = park ? park.varchi.find(v => v.id === op.varcoId) : null;
+
+        stato.sessioneVarco = {
+          autenticato: true,
+          isMaster: false,
+          operatore: op,
+          parcheggio: park,
+          varco: varco
+        };
+        chiudiModalLoginVarco();
+        aggiornaInterfacciaVarcoCorrente();
+        cambiaSchedaPrincipale('varco');
+        mostraNotifica(`Accesso Varco autorizzato: benvenuto ${op.nome}!`, 'success');
+        return;
+      }
+
+      if (pinInserito === stato.config.pwdMasterVarco) {
+        const parkDefault = stato.parcheggi[0];
+        const varcoDefault = parkDefault && parkDefault.varchi.length > 0 ? parkDefault.varchi[0] : null;
+
+        stato.sessioneVarco = {
+          autenticato: true,
+          isMaster: true,
+          operatore: { nome: 'Master Administrator' },
+          parcheggio: parkDefault,
+          varco: varcoDefault
+        };
+        chiudiModalLoginVarco();
+        aggiornaInterfacciaVarcoCorrente();
+        cambiaSchedaPrincipale('varco');
+        mostraNotifica(`Accesso Varco Master eseguito con successo!`, 'success');
+        return;
+      }
+
+      mostraNotifica("PIN o Password Varco non corretta.", "error");
+    }
+
+    function aggiornaInterfacciaVarcoCorrente() {
+      const sv = stato.sessioneVarco;
+      if (!sv.autenticato) return;
+
+      const badgeOpLoggato = document.getElementById('badge-operatore-loggato');
+      const labelOpAttivo = document.getElementById('label-operatore-attivo');
+      if (badgeOpLoggato && labelOpAttivo) {
+        badgeOpLoggato.classList.remove('hidden');
+        labelOpAttivo.innerText = `Operatore: ${sv.operatore.nome}`;
+      }
+
+      const varcoNome = document.getElementById('varco-attivo-nome');
+      const varcoPark = document.getElementById('varco-parcheggio-nome');
+      const badgeTipoVarco = document.getElementById('badge-tipo-varco');
+      const iconaModalita = document.getElementById('icona-modalita-varco');
+      const infoPostazione = document.getElementById('info-operatore-postazione');
+
+      if (varcoNome && sv.varco) varcoNome.innerText = sv.varco.nome;
+      if (varcoPark && sv.parcheggio) varcoPark.innerText = `${sv.parcheggio.nome} (${sv.parcheggio.indirizzo})`;
+      if (infoPostazione) infoPostazione.innerText = `Operatore: ${sv.operatore.nome}`;
+
+      if (sv.varco && sv.varco.direzione === 'USCITA') {
+        badgeTipoVarco.className = "text-xs font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30";
+        badgeTipoVarco.innerText = "VARCO USCITA (DEFLUSSO)";
+        iconaModalita.className = "w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-400 flex items-center justify-center text-2xl font-bold";
+        iconaModalita.innerHTML = `<i class="fa-solid fa-arrow-right-from-bracket"></i>`;
+      } else {
+        badgeTipoVarco.className = "text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        badgeTipoVarco.innerText = "VARCO ENTRATA (INGRESSO)";
+        iconaModalita.className = "w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-2xl font-bold";
+        iconaModalita.innerHTML = `<i class="fa-solid fa-arrow-right-to-bracket"></i>`;
+      }
+    }
+
+    function eseguiLogoutVarco() {
+      interrompiFotocameraScanner();
+      stato.sessioneVarco = { autenticato: false, isMaster: false, operatore: null, parcheggio: null, varco: null };
+      const badgeOpLoggato = document.getElementById('badge-operatore-loggato');
+      if (badgeOpLoggato) badgeOpLoggato.classList.add('hidden');
+      mostraNotifica("Sessione Varco chiusa.", "warning");
+      cambiaSchedaPrincipale('creapass');
+    }
+
+    // MODAL LOGIN ADMIN (In-Page, affidabile al 100%)
+    function apriModalLoginAdmin() {
+      if (stato.amministrazioneAutenticata) {
+        cambiaSchedaPrincipale('admin');
+        renderizzaTuttoAdmin();
+        return;
+      }
+      const input = document.getElementById('input-login-admin-pwd');
+      if (input) input.value = '';
+      document.getElementById('modal-login-admin').classList.remove('hidden');
+      setTimeout(() => { if (input) input.focus(); }, 100);
+    }
+
+    function chiudiModalLoginAdmin() {
+      document.getElementById('modal-login-admin').classList.add('hidden');
+    }
+
+    function confermaLoginAdminModal() {
+      const pwd = document.getElementById('input-login-admin-pwd').value.trim();
+      if (!pwd) return;
+
+      if (pwd === stato.config.pwdMasterAdmin) {
+        stato.amministrazioneAutenticata = true;
+        chiudiModalLoginAdmin();
+        cambiaSchedaPrincipale('admin');
+        renderizzaTuttoAdmin();
+        mostraNotifica("Benvenuto nell'Area Amministrazione!", "success");
+      } else {
+        mostraNotifica("Password Amministrazione errata.", "error");
+      }
+    }
+
+    // GESTIONE DEDICATA MENU BS (SICUREZZA & PASSWORD)
+    function apriModalLoginBS() {
+      if (stato.bsAutenticato) {
+        cambiaSchedaPrincipale('bs');
+        popolaCampiPasswordBS();
+        return;
+      }
+      const input = document.getElementById('input-login-bs-pwd');
+      if (input) input.value = '';
+      document.getElementById('modal-login-bs').classList.remove('hidden');
+      setTimeout(() => { if (input) input.focus(); }, 100);
+    }
+
+    function chiudiModalLoginBS() {
+      document.getElementById('modal-login-bs').classList.add('hidden');
+    }
+
+    function confermaLoginBSModal() {
+      const pwd = document.getElementById('input-login-bs-pwd').value.trim();
+      if (!pwd) return;
+
+      const pwdAttesaBS = stato.config.pwdMasterBS || '12345';
+      if (pwd === pwdAttesaBS || pwd === stato.config.pwdMasterAdmin) {
+        stato.bsAutenticato = true;
+        chiudiModalLoginBS();
+        cambiaSchedaPrincipale('bs');
+        popolaCampiPasswordBS();
+        mostraNotifica("Accesso autorizzato alla Consolle BS!", "success");
+      } else {
+        mostraNotifica("Password Menu BS non corretta.", "error");
+      }
+    }
+
+    function popolaCampiPasswordBS() {
+      const g = document.getElementById('input-bs-pwd-globale');
+      const v = document.getElementById('input-bs-pwd-varco');
+      const a = document.getElementById('input-bs-pwd-admin');
+      const b = document.getElementById('input-bs-pwd-bs');
+      if (g) g.value = stato.config.pwdGlobaleApp || '12345';
+      if (v) v.value = stato.config.pwdMasterVarco || '12345';
+      if (a) a.value = stato.config.pwdMasterAdmin || '12345';
+      if (b) b.value = stato.config.pwdMasterBS || '12345';
+    }
+
+    function salvaTutteLePasswordBS() {
+      const g = document.getElementById('input-bs-pwd-globale').value.trim();
+      const v = document.getElementById('input-bs-pwd-varco').value.trim();
+      const a = document.getElementById('input-bs-pwd-admin').value.trim();
+      const b = document.getElementById('input-bs-pwd-bs').value.trim();
+
+      if (!g || !v || !a || !b) {
+        mostraNotifica("Tutti i campi password devono essere compilati.", "warning");
+        return;
+      }
+
+      stato.config.pwdGlobaleApp = g;
+      stato.config.pwdMasterVarco = v;
+      stato.config.pwdMasterAdmin = a;
+      stato.config.pwdMasterBS = b;
+
+      salvaDatiInStorage();
+      mostraNotifica("Tutte le password di sicurezza sono state aggiornate con successo!", "success");
+    }
+
+    // Gestione Sblocco e Blocco Globale Web App
+    function eseguiSbloccoGlobaleApp() {
+      const input = document.getElementById('input-password-globale');
+      if (!input) return;
+      const pwdInserita = input.value.trim();
+
+      const pwdAttesa = stato.config.pwdGlobaleApp || '12345';
+
+      if (pwdInserita === pwdAttesa || pwdInserita === stato.config.pwdMasterAdmin) {
+        stato.appSbloccata = true;
+        document.getElementById('schermata-blocco-globale').classList.add('hidden');
+        emettiSuonoFeedback('success');
+        mostraNotifica("Benvenuto in Control Room Tecnology", "success");
+      } else {
+        emettiSuonoFeedback('error');
+        mostraNotifica("Password di accesso errata.", "error");
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function bloccaAppManualmente() {
+      stato.appSbloccata = false;
+      const input = document.getElementById('input-password-globale');
+      if (input) input.value = '';
+      document.getElementById('schermata-blocco-globale').classList.remove('hidden');
+      mostraNotifica("Applicazione bloccata con successo.", "warning");
+    }
+
+    function cambiaSchedaPrincipale(scheda) {
+      document.getElementById('vista-varco').classList.add('hidden');
+      document.getElementById('vista-creapass').classList.add('hidden');
+      document.getElementById('vista-amministrazione').classList.add('hidden');
+      document.getElementById('vista-bs').classList.add('hidden');
+
+      ['btn-tab-varco', 'btn-tab-creapass', 'btn-tab-admin'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.className = "flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-gray-400 hover:text-white";
+      });
+
+      const btnBS = document.getElementById('btn-tab-bs');
+      if (btnBS) {
+        btnBS.className = "flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-purple-400 hover:text-purple-300 border border-purple-500/20 bg-purple-950/30";
+      }
+
+      if (scheda === 'varco') {
+        document.getElementById('vista-varco').classList.remove('hidden');
+        document.getElementById('btn-tab-varco').className = "flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 font-bold shadow-md";
+      } else if (scheda === 'creapass') {
+        document.getElementById('vista-creapass').classList.remove('hidden');
+        document.getElementById('btn-tab-creapass').className = "flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 font-bold shadow-md";
+      } else if (scheda === 'admin') {
+        document.getElementById('vista-amministrazione').classList.remove('hidden');
+        document.getElementById('btn-tab-admin').className = "flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 font-bold shadow-md";
+      } else if (scheda === 'bs') {
+        document.getElementById('vista-bs').classList.remove('hidden');
+        if (btnBS) {
+          btnBS.className = "flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg shadow-purple-900/40";
+        }
+      }
+    }
+
+    function eseguiVerificaTargaManuale() {
+      const campo = document.getElementById('input-targa-manuale');
+      if (!campo) return;
+      const targa = campo.value.trim().toUpperCase();
+      if (!targa) return;
+      processaVerificaVarco(targa);
+      campo.value = '';
+    }
+
+    function impostaTargaRapida(t) {
+      document.getElementById('input-targa-manuale').value = t;
+      eseguiVerificaTargaManuale();
+    }
+
+    function processaVerificaVarco(targaOStringaQr) {
+      const sv = stato.sessioneVarco;
+      if (!sv.autenticato) {
+        mostraNotifica("Devi prima effettuare l'accesso al Varco col PIN.", "warning");
+        apriModalLoginVarco();
+        return;
+      }
+
+      let targaDaCercare = targaOStringaQr;
+      let datiQrDecodificati = null;
+      try {
+        if (targaOStringaQr.includes('{') && targaOStringaQr.includes('}')) {
+          datiQrDecodificati = JSON.parse(targaOStringaQr);
+          if (datiQrDecodificati.targa) targaDaCercare = datiQrDecodificati.targa.toUpperCase();
+        }
+      } catch (e) {}
+
+      targaDaCercare = targaDaCercare.trim().toUpperCase();
+
+      let pass = stato.passRegistrati.find(p => p.targa === targaDaCercare);
+      if (!pass && datiQrDecodificati) {
+        pass = {
+          id: datiQrDecodificati.id || 'PASS-SCAN',
+          targa: datiQrDecodificati.targa,
+          nome: datiQrDecodificati.nome || 'Ospite',
+          azienda: datiQrDecodificati.azienda || 'Partecipante',
+          parcheggioId: datiQrDecodificati.parcheggioId,
+          dataDa: datiQrDecodificati.dataDa,
+          dataA: datiQrDecodificati.dataA,
+          statoVeicolo: 'ESTERNO'
+        };
+      }
+
+      const boxEsito = document.getElementById('box-esito-controllo');
+      const oggi = new Date().toISOString().split('T')[0];
+      const oraAttuale = new Date().toLocaleTimeString('it-IT');
+
+      if (!pass) {
+        emettiSuonoFeedback('error');
+        boxEsito.className = "bg-red-950/70 border-2 border-red-500 rounded-2xl p-6 text-center transition-all";
+        boxEsito.innerHTML = `
+          <div class="w-20 h-20 rounded-full bg-red-600/30 border border-red-500 text-red-400 flex items-center justify-center text-3xl mx-auto mb-3">
+            <i class="fa-solid fa-ban"></i>
+          </div>
+          <span class="text-xs uppercase font-extrabold text-red-300">ACCESSO NEGATO</span>
+          <h2 class="text-3xl font-black text-white font-mono tracking-widest my-1">${targaDaCercare}</h2>
+          <p class="text-xs text-red-200 max-w-sm mx-auto mb-3 font-medium">Nessun pass trovato o autorizzato per questa targa.</p>
+        `;
+        registraTransitoNelLog(targaDaCercare, 'Sconosciuto', sv.varco.direzione, sv.varco.nome, 'NEGATO (NON AUTORIZZATO)');
+        return;
+      }
+
+      if (pass.dataDa && pass.dataA && (oggi < pass.dataDa || oggi > pass.dataA)) {
+        emettiSuonoFeedback('warning');
+        boxEsito.className = "bg-amber-950/70 border-2 border-amber-500 rounded-2xl p-6 text-center transition-all";
+        boxEsito.innerHTML = `
+          <div class="w-20 h-20 rounded-full bg-amber-600/30 border border-amber-500 text-amber-400 flex items-center justify-center text-3xl mx-auto mb-3">
+            <i class="fa-solid fa-calendar-xmark"></i>
+          </div>
+          <span class="text-xs uppercase font-extrabold text-amber-300">PASS NON VALIDO OGGI</span>
+          <h2 class="text-3xl font-black text-white font-mono tracking-widest my-1">${pass.targa}</h2>
+          <p class="text-xs text-amber-200 max-w-sm mx-auto mb-2">Validità del pass: dal ${pass.dataDa} al ${pass.dataA}.</p>
+        `;
+        registraTransitoNelLog(pass.targa, pass.nome, sv.varco.direzione, sv.varco.nome, 'NEGATO (SCADUTO)');
+        return;
+      }
+
+      const parcheggioDestinazione = stato.parcheggi.find(p => p.id === pass.parcheggioId) || { nome: 'Altro Parcheggio' };
+      if (sv.parcheggio && pass.parcheggioId !== sv.parcheggio.id) {
+        emettiSuonoFeedback('warning');
+        boxEsito.className = "bg-orange-950/80 border-2 border-orange-500 rounded-2xl p-6 text-center transition-all";
+        boxEsito.innerHTML = `
+          <div class="w-20 h-20 rounded-full bg-orange-600/30 border border-orange-500 text-orange-400 flex items-center justify-center text-3xl mx-auto mb-3">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <span class="text-xs uppercase font-extrabold text-orange-300">PARCHEGGIO ERRATO!</span>
+          <h2 class="text-3xl font-black text-white font-mono tracking-widest my-1">${pass.targa}</h2>
+          <div class="p-3 bg-gray-950/80 rounded-xl border border-orange-500/40 text-xs text-left max-w-xs mx-auto my-3 space-y-1">
+            <div class="text-gray-400">Assegnato a: <strong class="text-white">${parcheggioDestinazione.nome}</strong></div>
+            <div class="text-gray-400">Postazione attuale: <span class="text-amber-400">${sv.parcheggio.nome}</span></div>
+            <div class="text-gray-400">Indirizzo corretto: <span class="text-gray-200 font-medium">${parcheggioDestinazione.indirizzo || '-'}</span></div>
+          </div>
+          <p class="text-xs text-orange-200">Reindirizzare l'automobilista al suo parcheggio assegnato.</p>
+        `;
+        registraTransitoNelLog(pass.targa, pass.nome, sv.varco.direzione, sv.varco.nome, `ERRATO PARCHEGGIO (-> ${parcheggioDestinazione.nome})`);
+        return;
+      }
+
+      const park = sv.parcheggio;
+
+      if (sv.varco.direzione === 'ENTRATA') {
+        if (park.presenti >= park.capienza) {
+          emettiSuonoFeedback('warning');
+          boxEsito.className = "bg-red-950/80 border-2 border-red-500 rounded-2xl p-6 text-center transition-all";
+          boxEsito.innerHTML = `
+            <div class="w-20 h-20 rounded-full bg-red-600/30 border border-red-500 text-red-400 flex items-center justify-center text-3xl mx-auto mb-3">
+              <i class="fa-solid fa-traffic-light"></i>
+            </div>
+            <span class="text-xs uppercase font-extrabold text-red-300">PARCHEGGIO COMPLETO!</span>
+            <h2 class="text-3xl font-black text-white font-mono tracking-widest my-1">${pass.targa}</h2>
+            <p class="text-xs text-red-200 max-w-sm mx-auto my-2">Capienza massima raggiunta (${park.presenti}/${park.capienza}). Attendere un'uscita.</p>
+          `;
+          registraTransitoNelLog(pass.targa, pass.nome, 'ENTRATA', sv.varco.nome, 'BLOCCATO (PARK COMPLETO)');
+          return;
+        }
+
+        park.presenti++;
+        pass.statoVeicolo = 'PRESENTE';
+        salvaDatiInStorage();
+        aggiornaMonitoraggioParcheggi();
+
+        emettiSuonoFeedback('success');
+        boxEsito.className = "bg-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-6 text-center transition-all shadow-xl shadow-emerald-950/50";
+        boxEsito.innerHTML = `
+          <div class="w-20 h-20 rounded-full bg-emerald-600/30 border border-emerald-500 text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-3">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <span class="text-xs uppercase font-extrabold text-emerald-300">ACCESSO AUTORIZZATO</span>
+          <h2 class="text-3xl font-black text-white font-mono tracking-widest my-1">${pass.targa}</h2>
+          <div class="p-3 bg-gray-950/80 rounded-xl border border-emerald-500/40 text-xs text-left max-w-xs mx-auto my-3 space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Intestatario:</span> <strong class="text-white">${pass.nome}</strong></div>
+            <div class="flex justify-between"><span class="text-gray-400">Azienda/Ruolo:</span> <span class="text-gray-300">${pass.azienda || '-'}</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Varco Ingresso:</span> <span class="text-emerald-400 font-bold">${sv.varco.nome}</span></div>
+            <div class="flex justify-between border-t border-gray-800 pt-1 mt-1"><span class="text-gray-400">Posti Liberi Residui:</span> <strong class="text-emerald-300 font-mono text-sm">${park.capienza - park.presenti}</strong></div>
+          </div>
+          <p class="text-[11px] text-emerald-300 font-mono">Transito registrato alle ore ${oraAttuale}</p>
+        `;
+        registraTransitoNelLog(pass.targa, pass.nome, 'ENTRATA', sv.varco.nome, 'AUTORIZZATO (+1)');
+
+      } else {
+        if (park.presenti > 0) park.presenti--;
+        pass.statoVeicolo = 'ESTERNO';
+        salvaDatiInStorage();
+        aggiornaMonitoraggioParcheggi();
+
+        emettiSuonoFeedback('exit');
+        boxEsito.className = "bg-blue-950/80 border-2 border-blue-500 rounded-2xl p-6 text-center transition-all shadow-xl shadow-blue-950/50";
+        boxEsito.innerHTML = `
+          <div class="w-20 h-20 rounded-full bg-blue-600/30 border border-blue-500 text-blue-400 flex items-center justify-center text-3xl mx-auto mb-3">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </div>
+          <span class="text-xs uppercase font-extrabold text-blue-300">USCITA REGISTRATA</span>
+          <h2 class="text-3xl font-black text-white font-mono tracking-widest my-1">${pass.targa}</h2>
+          <div class="p-3 bg-gray-950/80 rounded-xl border border-blue-500/40 text-xs text-left max-w-xs mx-auto my-3 space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Conducente:</span> <strong class="text-white">${pass.nome}</strong></div>
+            <div class="flex justify-between"><span class="text-gray-400">Varco Uscita:</span> <span class="text-blue-400 font-bold">${sv.varco.nome}</span></div>
+            <div class="flex justify-between border-t border-gray-800 pt-1 mt-1"><span class="text-gray-400">Posto Liberato! Ora Liberi:</span> <strong class="text-emerald-300 font-mono text-sm">${park.capienza - park.presenti}</strong></div>
+          </div>
+          <p class="text-[11px] text-blue-300 font-mono">Uscita registrata alle ore ${oraAttuale}</p>
+        `;
+        registraTransitoNelLog(pass.targa, pass.nome, 'USCITA', sv.varco.nome, 'USCITA (-1 POSTO LIBERO)');
+      }
+    }
+
+    function registraTransitoNelLog(targa, nome, tipo, varco, esito) {
+      stato.logTransiti.unshift({
+        ora: new Date().toLocaleTimeString('it-IT'),
+        targa: targa,
+        nome: nome,
+        tipo: tipo,
+        varco: varco,
+        esito: esito
+      });
+      if (stato.logTransiti.length > 50) stato.logTransiti.pop();
+      salvaDatiInStorage();
+      renderizzaTabellaLog();
+    }
+
+    function renderizzaTabellaLog() {
+      const tbody = document.getElementById('tabella-log-transiti');
+      const badgeTot = document.getElementById('totale-transiti-badge');
+      if (!tbody) return;
+      badgeTot.innerText = `${stato.logTransiti.length} Registrati`;
+
+      if (stato.logTransiti.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-gray-600 font-sans">Nessun transito registrato in questa sessione.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = stato.logTransiti.slice(0, 10).map(l => `
+        <tr class="hover:bg-gray-800/40">
+          <td class="py-2 px-3 text-gray-400">${l.ora}</td>
+          <td class="py-2 px-3 font-bold text-white">${l.targa}</td>
+          <td class="py-2 px-3 text-gray-300 truncate max-w-[120px] font-sans">${l.nome}</td>
+          <td class="py-2 px-3 font-semibold ${l.tipo === 'ENTRATA' ? 'text-emerald-400' : 'text-blue-400'}">${l.tipo}</td>
+          <td class="py-2 px-3 text-gray-400 font-sans">${l.varco}</td>
+          <td class="py-2 px-3 text-right ${l.esito.includes('NEGATO') || l.esito.includes('BLOCCATO') ? 'text-red-400 font-bold' : (l.esito.includes('ERRATO') ? 'text-amber-400 font-bold' : 'text-emerald-400')}">${l.esito}</td>
+        </tr>
+      `).join('');
+    }
+
+    function toggleFotocameraScanner() {
+      if (fotocameraInUso) {
+        interrompiFotocameraScanner();
+      } else {
+        avviaFotocameraScanner();
+      }
+    }
+
+    function avviaFotocameraScanner() {
+      const box = document.getElementById('box-scanner-fotocamera');
+      const btnTesto = document.getElementById('testo-btn-camera');
+      box.classList.remove('hidden');
+      btnTesto.innerText = "FERMA FOTOCAMERA SCANNER";
+
+      html5QrScannerInstance = new Html5Qrcode("lettore-fotocamera-qr");
+      const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+      html5QrScannerInstance.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          interrompiFotocameraScanner();
+          processaVerificaVarco(decodedText);
+        },
+        (errorMessage) => {}
+      ).then(() => {
+        fotocameraInUso = true;
+      }).catch(err => {
+        console.error("Errore fotocamera:", err);
+        mostraNotifica("Impossibile aprire la fotocamera. Verifica permessi concessi.", "error");
+        box.classList.add('hidden');
+        btnTesto.innerText = "ATTIVA FOTOCAMERA PER SCANSIONE QR";
+        fotocameraInUso = false;
+      });
+    }
+
+    function interrompiFotocameraScanner() {
+      if (html5QrScannerInstance && fotocameraInUso) {
+        html5QrScannerInstance.stop().then(() => {
+          html5QrScannerInstance.clear();
+          fotocameraInUso = false;
+          document.getElementById('box-scanner-fotocamera').classList.add('hidden');
+          document.getElementById('testo-btn-camera').innerText = "ATTIVA FOTOCAMERA PER SCANSIONE QR";
+        }).catch(err => console.warn(err));
+      } else {
+        document.getElementById('box-scanner-fotocamera').classList.add('hidden');
+        document.getElementById('testo-btn-camera').innerText = "ATTIVA FOTOCAMERA PER SCANSIONE QR";
+        fotocameraInUso = false;
+      }
+    }
+
+    let passCorrenteGenerato = null;
+
+    function impostaDateDefaultFormPass() {
+      const oggi = new Date().toISOString().split('T')[0];
+      const domani = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      document.getElementById('form-pass-data-da').value = oggi;
+      document.getElementById('form-pass-data-a').value = domani;
+    }
+
+    function aggiornaSelettoreParcheggiCreaPass() {
+      const select = document.getElementById('form-pass-parcheggio');
+      if (!select) return;
+      select.innerHTML = stato.parcheggi.map(p => `
+        <option value="${p.id}">${p.nome} (Capienza: ${p.capienza} auto)</option>
+      `).join('');
+      aggiornaDettagliParcheggioSelezionatoForm();
+    }
+
+    function aggiornaDettagliParcheggioSelezionatoForm() {
+      const pId = document.getElementById('form-pass-parcheggio').value;
+      const park = stato.parcheggi.find(p => p.id === pId);
+      const label = document.getElementById('form-pass-indirizzo-label');
+      if (park && label) {
+        label.innerText = park.indirizzo;
+      }
+    }
+
+    function eseguiGenerazionePass() {
+      const targa = document.getElementById('form-pass-targa').value.trim().toUpperCase();
+      const nome = document.getElementById('form-pass-nome').value.trim();
+      const azienda = document.getElementById('form-pass-azienda').value.trim();
+      const parcheggioId = document.getElementById('form-pass-parcheggio').value;
+      const dataDa = document.getElementById('form-pass-data-da').value;
+      const dataA = document.getElementById('form-pass-data-a').value;
+      const telefono = document.getElementById('form-pass-telefono').value.trim();
+      const email = document.getElementById('form-pass-email').value.trim();
+
+      if (!targa || !nome || !parcheggioId || !dataDa || !dataA) {
+        mostraNotifica("Compila tutti i campi obbligatori (*).", "warning");
+        return;
+      }
+
+      const park = stato.parcheggi.find(p => p.id === parcheggioId);
+      const nuovoId = 'CR-' + Math.floor(100000 + Math.random() * 900000);
+
+      const passObj = {
+        id: nuovoId,
+        targa: targa,
+        nome: nome,
+        azienda: azienda || 'Ospite Autorizzato',
+        parcheggioId: parcheggioId,
+        dataDa: dataDa,
+        dataA: dataA,
+        telefono: telefono,
+        email: email,
+        statoVeicolo: 'ESTERNO'
+      };
+
+      const indiceEsistente = stato.passRegistrati.findIndex(p => p.targa === targa);
+      if (indiceEsistente >= 0) {
+        stato.passRegistrati[indiceEsistente] = passObj;
+      } else {
+        stato.passRegistrati.push(passObj);
+      }
+      salvaDatiInStorage();
+      renderizzaRegistroPassAnagrafica();
+
+      passCorrenteGenerato = { ...passObj, parkObj: park };
+      renderizzaBadgeGraficoPass(passCorrenteGenerato);
+      emettiSuonoFeedback('success');
+      mostraNotifica(`Pass per ${targa} generato con successo!`, "success");
+    }
+
+    function renderizzaBadgeGraficoPass(p) {
+      document.getElementById('badge-pass-codice').innerText = `#${p.id}`;
+      document.getElementById('badge-pass-targa').innerText = p.targa;
+      document.getElementById('badge-pass-parcheggio').innerText = p.parkObj.nome;
+      document.getElementById('badge-pass-indirizzo').innerText = p.parkObj.indirizzo;
+      document.getElementById('badge-pass-intestatario').innerText = `${p.nome} ${p.azienda ? '(' + p.azienda + ')' : ''}`;
+      document.getElementById('badge-pass-validita').innerText = `${p.dataDa} - ${p.dataA}`;
+
+      const queryMappe = encodeURIComponent(p.parkObj.indirizzo);
+      const coords = p.parkObj.coords ? p.parkObj.coords.replace(/\s+/g, '') : null;
+
+      document.getElementById('link-nav-google').href = `https://www.google.com/maps/search/?api=1&query=${queryMappe}`;
+      document.getElementById('link-nav-waze').href = coords ? `https://waze.com/ul?ll=${coords}&navigate=yes` : `https://waze.com/ul?q=${queryMappe}`;
+      document.getElementById('link-nav-apple').href = `https://maps.apple.com/?q=${queryMappe}`;
+
+      const boxQr = document.getElementById('box-visuale-qrcode');
+      boxQr.innerHTML = '';
+      const payloadQr = JSON.stringify({
+        id: p.id,
+        targa: p.targa,
+        nome: p.nome,
+        azienda: p.azienda,
+        parcheggioId: p.parcheggioId,
+        dataDa: p.dataDa,
+        dataA: p.dataA
+      });
+
+      new QRCode(boxQr, {
+        text: payloadQr,
+        width: 176,
+        height: 176,
+        colorDark: "#030712",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function scaricaPassInPDF() {
+      const elementoBadge = document.getElementById('contenitore-badge-pass');
+      const opt = {
+        margin: 10,
+        filename: `PASS_${document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#030712' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(elementoBadge).save();
+    }
+
+    function scaricaPassInPNG() {
+      const elementoBadge = document.getElementById('contenitore-badge-pass');
+      html2canvas(elementoBadge, { scale: 2, backgroundColor: '#030712' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `PASS_${document.getElementById('badge-pass-targa').innerText.replace(/\s+/g, '')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    function inviaPassSuWhatsApp() {
+      if (!passCorrenteGenerato) {
+        mostraNotifica("Genera prima un pass per inviare i dettagli.", "warning");
+        return;
+      }
+      const p = passCorrenteGenerato;
+      const tel = p.telefono.replace(/[^0-9+]/g, '');
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.parkObj.indirizzo)}`;
+
+      const msg = `*PASS ACCESSO PARCHEGGIO - ${stato.config.nomeEvento}*\n\n` +
+                  `🚗 *Targa:* ${p.targa}\n` +
+                  `👤 *Intestatario:* ${p.nome}\n` +
+                  `🅿️ *Parcheggio Assegnato:* ${p.parkObj.nome}\n` +
+                  `📍 *Indirizzo:* ${p.parkObj.indirizzo}\n` +
+                  `🗓️ *Validità:* dal ${p.dataDa} al ${p.dataA}\n\n` +
+                  `🧭 *Link Navigazione Rapida (Google Maps):*\n${mapsUrl}\n\n` +
+                  `⚠️ *Nota:* Mostra il Pass o il QR Code allegato al personale del Varco per accedere.`;
+
+      const urlWhatsApp = tel ? `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(msg)}` : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+      window.open(urlWhatsApp, '_blank');
+    }
+
+    function inviaPassPerEmail() {
+      if (!passCorrenteGenerato) {
+        mostraNotifica("Genera prima un pass per inviare i dettagli.", "warning");
+        return;
+      }
+      const p = passCorrenteGenerato;
+      const subject = `Pass Accesso Parcheggio: ${p.targa} - ${stato.config.nomeEvento}`;
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.parkObj.indirizzo)}`;
+      const body = `Gentile ${p.nome},\n\n` +
+                   `In allegato trovi il tuo Pass ufficiale per l'accesso veicolare all'evento.\n\n` +
+                   `DATI VEICOLO:\n` +
+                   `- Targa: ${p.targa}\n` +
+                   `- Parcheggio Riservato: ${p.parkObj.nome}\n` +
+                   `- Indirizzo: ${p.parkObj.indirizzo}\n` +
+                   `- Validità: dal ${p.dataDa} al ${p.dataA}\n\n` +
+                   `Link per navigare direttamente al parcheggio assegnato:\n` +
+                   `${mapsUrl}\n\n` +
+                   `Cordiali saluti,\nControl Room`;
+
+      const mailtoUrl = `mailto:${p.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
+    }
+
+    function cambiaSubmenuAdmin(sottoscheda) {
+      ['parcheggi', 'operatori', 'inviti', 'anagrafica'].forEach(s => {
+        const sub = document.getElementById(`subsezione-${s}`);
+        const btn = document.getElementById(`btn-sub-${s}`);
+        if (sub) sub.classList.add('hidden');
+        if (btn) btn.className = "px-4 py-2 bg-gray-800 text-gray-300 hover:text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2";
+      });
+      const subAttiva = document.getElementById(`subsezione-${sottoscheda}`);
+      const btnAttivo = document.getElementById(`btn-sub-${sottoscheda}`);
+      if (subAttiva) subAttiva.classList.remove('hidden');
+      if (btnAttivo) btnAttivo.className = "px-4 py-2 bg-amber-500 text-gray-950 font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow";
+
+      if (sottoscheda === 'inviti') {
+        popolaFormGeneratoreInviti();
+      }
+    }
+
+    // =========================================================
+    // LOGICA GENERAZIONE LINK PERSONALIZZATI & PORTALE CLIENTE
+    // =========================================================
+    let datiInvitoAttivoCliente = null;
+
+    function popolaFormGeneratoreInviti() {
+      const sel = document.getElementById('invito-cliente-parcheggio');
+      if (sel) {
+        sel.innerHTML = stato.parcheggi.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+      }
+      const oggi = new Date().toISOString().split('T')[0];
+      const dDa = document.getElementById('invito-cliente-da');
+      const dA = document.getElementById('invito-cliente-a');
+      if (dDa && !dDa.value) dDa.value = oggi;
+      if (dA && !dA.value) dA.value = oggi;
+    }
+
+    function generaLinkPersonalizzatoCliente() {
+      const azienda = document.getElementById('invito-cliente-nome').value.trim();
+      const parkId = document.getElementById('invito-cliente-parcheggio').value;
+      const dataDa = document.getElementById('invito-cliente-da').value;
+      const dataA = document.getElementById('invito-cliente-a').value;
+
+      if (!azienda || !parkId || !dataDa || !dataA) {
+        mostraNotifica("Compila Azienda/Cliente, Parcheggio e entrambe le date.", "warning");
+        return;
+      }
+      if (dataA < dataDa) {
+        mostraNotifica("La data di fine non può essere precedente alla data di inizio.", "error");
+        return;
+      }
+
+      const park = stato.parcheggi.find(p => p.id === parkId) || stato.parcheggi[0];
+      const payload = {
+        az: azienda,
+        pid: park.id,
+        pnm: park.nome,
+        pind: park.indirizzo,
+        pcrd: park.coords || '',
+        da: dataDa,
+        a: dataA
+      };
+
+      const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+      const baseUrl = window.location.href.split('?')[0].split('#')[0];
+      const linkCompleto = `${baseUrl}?invite=${encoded}`;
+
+      document.getElementById('output-url-invito-cliente').value = linkCompleto;
+      document.getElementById('label-destinatario-link').innerText = azienda;
+      document.getElementById('label-date-link').innerText = `Dal ${dataDa} al ${dataA}`;
+      document.getElementById('box-risultato-link-invito').classList.remove('hidden');
+
+      mostraNotifica(`Link personalizzato generato per ${azienda}!`, "success");
+    }
+
+    function copiaLinkInvitoNegliAppunti() {
+      const input = document.getElementById('output-url-invito-cliente');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      mostraNotifica("Link copiato negli appunti!", "success");
+    }
+
+    function condividiLinkInvitoWhatsApp() {
+      const link = document.getElementById('output-url-invito-cliente').value;
+      const azienda = document.getElementById('label-destinatario-link').innerText;
+      const dateStr = document.getElementById('label-date-link').innerText;
+      const msg = `Gentile *${azienda}*,\n\n` +
+                  `Ecco il vostro link riservato per generare il Pass Auto con QR Code (${dateStr}):\n` +
+                  `${link}\n\n` +
+                  `Aprite il link, inserite la targa del veicolo e scaricate il vostro Pass ufficiale.`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function condividiLinkInvitoEmail() {
+      const link = document.getElementById('output-url-invito-cliente').value;
+      const azienda = document.getElementById('label-destinatario-link').innerText;
+      const dateStr = document.getElementById('label-date-link').innerText;
+      const subject = `Invito Pass Parcheggio Riservato - ${azienda}`;
+      const body = `Gentile ${azienda},\n\n` +
+                   `Vi inviamo il link personale preconfigurato per generare il Pass di accesso al parcheggio (${dateStr}):\n\n` +
+                   `${link}\n\n` +
+                   `Una volta aperto il link sarà sufficiente digitare la targa del veicolo e il nome del conducente per ottenere immediatamente il QR Code.\n\n` +
+                   `Cordiali saluti,\nControl Room`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function verificaEApriModalitaInvitoCliente() {
+      const params = new URLSearchParams(window.location.search);
+      const inviteToken = params.get('invite');
+      if (!inviteToken) return false;
+
+      try {
+        const decoded = JSON.parse(decodeURIComponent(atob(inviteToken)));
+        datiInvitoAttivoCliente = decoded;
+
+        // Nascondi schermata di blocco staff e mostra portale self-service cliente
+        document.getElementById('schermata-blocco-globale').classList.add('hidden');
+        document.getElementById('schermata-invito-cliente').classList.remove('hidden');
+
+        document.getElementById('guest-invite-azienda').innerText = decoded.az;
+        document.getElementById('guest-invite-parcheggio').innerHTML = `<i class="fa-solid fa-square-parking mr-1"></i> ${decoded.pnm}`;
+        document.getElementById('guest-invite-indirizzo').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> ${decoded.pind}`;
+        document.getElementById('guest-invite-date').innerText = `Dal ${decoded.da} al ${decoded.a}`;
+
+        return true;
+      } catch (e) {
+        console.error("Token invito non valido:", e);
+        return false;
+      }
+    }
+
+    function generaPassSelfServiceCliente() {
+      if (!datiInvitoAttivoCliente) return;
+      const targa = document.getElementById('guest-input-targa').value.trim().toUpperCase();
+      const nomeConducente = document.getElementById('guest-input-nome').value.trim();
+
+      if (!targa || !nomeConducente) {
+        mostraNotifica("Inserisci sia la targa del veicolo che il nome del conducente.", "warning");
+        return;
+      }
+
+      const d = datiInvitoAttivoCliente;
+      const passId = 'CR-' + Math.floor(100000 + Math.random() * 900000);
+
+      // Salva anche nel registro locale se aperto sullo stesso dispositivo
+      stato.passRegistrati.push({
+        id: passId,
+        targa: targa,
+        nome: nomeConducente,
+        azienda: d.az,
+        parcheggioId: d.pid,
+        dataDa: d.da,
+        dataA: d.a,
+        telefono: '',
+        email: '',
+        statoVeicolo: 'ESTERNO'
+      });
+      salvaDatiInStorage();
+
+      document.getElementById('guest-badge-azienda').innerText = d.az;
+      document.getElementById('guest-badge-id').innerText = `#${passId}`;
+      document.getElementById('guest-badge-targa').innerText = targa;
+      document.getElementById('guest-badge-park').innerText = d.pnm;
+      document.getElementById('guest-badge-conducente').innerText = nomeConducente;
+      document.getElementById('guest-badge-validita').innerText = `${d.da} / ${d.a}`;
+
+      const queryMappe = encodeURIComponent(d.pind);
+      const coords = d.pcrd ? d.pcrd.replace(/\s+/g, '') : null;
+      document.getElementById('guest-nav-google').href = `https://www.google.com/maps/search/?api=1&query=${queryMappe}`;
+      document.getElementById('guest-nav-waze').href = coords ? `https://waze.com/ul?ll=${coords}&navigate=yes` : `https://waze.com/ul?q=${queryMappe}`;
+      document.getElementById('guest-nav-apple').href = `https://maps.apple.com/?q=${queryMappe}`;
+
+      const boxQr = document.getElementById('guest-box-qrcode');
+      boxQr.innerHTML = '';
+      new QRCode(boxQr, {
+        text: JSON.stringify({
+          id: passId,
+          targa: targa,
+          nome: nomeConducente,
+          azienda: d.az,
+          parcheggioId: d.pid,
+          dataDa: d.da,
+          dataA: d.a
+        }),
+        width: 155,
+        height: 155,
+        colorDark: "#030712",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      document.getElementById('guest-pass-risultato').classList.remove('hidden');
+      mostraNotifica("Il tuo Pass con QR Code è pronto!", "success");
+    }
+
+    function scaricaPassClientePDF() {
+      const el = document.getElementById('guest-badge-stampabile');
+      const targa = document.getElementById('guest-badge-targa').innerText.replace(/\s+/g, '');
+      html2pdf().set({
+        margin: 10,
+        filename: `PASS_${targa}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#030712' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(el).save();
+    }
+
+    function scaricaPassClientePNG() {
+      const el = document.getElementById('guest-badge-stampabile');
+      const targa = document.getElementById('guest-badge-targa').innerText.replace(/\s+/g, '');
+      html2canvas(el, { scale: 2, backgroundColor: '#030712' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `PASS_${targa}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    function renderizzaTuttoAdmin() {
+      renderizzaListaParcheggiAdmin();
+      renderizzaTabellaOperatoriAdmin();
+      renderizzaRegistroPassAnagrafica();
+    }
+
+    function renderizzaListaParcheggiAdmin() {
+      const container = document.getElementById('lista-parcheggi-amministrazione');
+      if (!container) return;
+      container.innerHTML = '';
+
+      stato.parcheggi.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-lg";
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-800 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-black text-white uppercase">${p.nome}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-800 text-amber-400 font-mono">Capienza: ${p.capienza} posti</span>
+              </div>
+              <p class="text-xs text-gray-400 mt-0.5"><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i>${p.indirizzo}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="apriModalAggiungiVarco('${p.id}')" class="px-3 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-plus"></i> Aggiungi Varco
+              </button>
+              <button onclick="eliminaParcheggio('${p.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/80 text-red-300 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <span class="text-[11px] uppercase font-bold text-gray-400 block">Varchi configurati per ${p.nome}:</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              ${p.varchi.map(v => `
+                <div class="bg-gray-950 border border-gray-800 rounded-xl p-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg ${v.direzione === 'ENTRATA' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'} flex items-center justify-center text-xs font-bold">
+                      <i class="fa-solid ${v.direzione === 'ENTRATA' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket'}"></i>
+                    </span>
+                    <div>
+                      <div class="font-bold text-white text-xs">${v.nome}</div>
+                      <div class="text-[10px] ${v.direzione === 'ENTRATA' ? 'text-emerald-400' : 'text-blue-400'} font-semibold">${v.direzione}</div>
+                    </div>
+                  </div>
+                  <button onclick="eliminaVarco('${p.id}', '${v.id}')" class="text-gray-500 hover:text-red-400 p-1 text-xs" title="Elimina Varco">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function apriModalAggiungiParcheggio() {
+      document.getElementById('modal-p-nome').value = '';
+      document.getElementById('modal-p-capienza').value = '250';
+      document.getElementById('modal-p-indirizzo').value = 'Rimini RN';
+      document.getElementById('modal-p-coordinate').value = '';
+      document.getElementById('modal-parcheggio').classList.remove('hidden');
+    }
+
+    function chiudiModalParcheggio() {
+      document.getElementById('modal-parcheggio').classList.add('hidden');
+    }
+
+    function salvaNuovoParcheggioModal() {
+      const nome = document.getElementById('modal-p-nome').value.trim();
+      const capienza = parseInt(document.getElementById('modal-p-capienza').value);
+      const indirizzo = document.getElementById('modal-p-indirizzo').value.trim();
+      const coords = document.getElementById('modal-p-coordinate').value.trim();
+
+      if (!nome || !capienza || !indirizzo) {
+        mostraNotifica("Compila tutti i campi obbligatori.", "warning");
+        return;
+      }
+
+      const nuovoP = {
+        id: 'PARK-' + Date.now(),
+        nome: nome,
+        capienza: capienza,
+        presenti: 0,
+        indirizzo: indirizzo,
+        coords: coords || '44.0678,12.5695',
+        varchi: [
+          { id: 'V-' + Date.now() + '-1', nome: 'Varco Entrata 1', direzione: 'ENTRATA', attivo: true },
+          { id: 'V-' + Date.now() + '-2', nome: 'Varco Uscita 1', direzione: 'USCITA', attivo: true }
+        ]
+      };
+
+      stato.parcheggi.push(nuovoP);
+      salvaDatiInStorage();
+      chiudiModalParcheggio();
+      renderizzaListaParcheggiAdmin();
+      aggiornaMonitoraggioParcheggi();
+      aggiornaSelettoreParcheggiCreaPass();
+      mostraNotifica("Nuovo Parcheggio e Varchi creati!", "success");
+    }
+
+    function eliminaParcheggio(pId) {
+      if (stato.parcheggi.length <= 1) {
+        mostraNotifica("Deve esserci almeno un parcheggio configurato.", "warning");
+        return;
+      }
+      stato.parcheggi = stato.parcheggi.filter(p => p.id !== pId);
+      salvaDatiInStorage();
+      renderizzaListaParcheggiAdmin();
+      aggiornaMonitoraggioParcheggi();
+      aggiornaSelettoreParcheggiCreaPass();
+      mostraNotifica("Parcheggio rimosso con successo.", "success");
+    }
+
+    function apriModalAggiungiVarco(parcheggioId) {
+      document.getElementById('modal-v-parcheggio-id').value = parcheggioId;
+      document.getElementById('modal-v-nome').value = '';
+      document.getElementById('modal-varco').classList.remove('hidden');
+    }
+
+    function chiudiModalVarco() {
+      document.getElementById('modal-varco').classList.add('hidden');
+    }
+
+    function confermaAggiungiVarcoModal() {
+      const pId = document.getElementById('modal-v-parcheggio-id').value;
+      const nomeVarco = document.getElementById('modal-v-nome').value.trim();
+      const dirVarco = document.getElementById('modal-v-direzione').value;
+
+      if (!nomeVarco) {
+        mostraNotifica("Inserisci un nome per il varco.", "warning");
+        return;
+      }
+
+      const park = stato.parcheggi.find(p => p.id === pId);
+      if (park) {
+        park.varchi.push({
+          id: 'V-' + Date.now(),
+          nome: nomeVarco,
+          direzione: dirVarco,
+          attivo: true
+        });
+        salvaDatiInStorage();
+        chiudiModalVarco();
+        renderizzaListaParcheggiAdmin();
+        aggiornaMonitoraggioParcheggi();
+        mostraNotifica("Nuovo varco aggiunto!", "success");
+      }
+    }
+
+    function eliminaVarco(pId, vId) {
+      const park = stato.parcheggi.find(p => p.id === pId);
+      if (!park) return;
+      if (park.varchi.length <= 1) {
+        mostraNotifica("Ogni parcheggio deve avere almeno un varco attivo.", "warning");
+        return;
+      }
+      park.varchi = park.varchi.filter(v => v.id !== vId);
+      salvaDatiInStorage();
+      renderizzaListaParcheggiAdmin();
+      aggiornaMonitoraggioParcheggi();
+      mostraNotifica("Varco eliminato.", "info");
+    }
+
+    // TABELLA OPERATORI IN ADMIN (CON PULSANTE CAMBIA VARCO IN AZIONI)
+    function renderizzaTabellaOperatoriAdmin() {
+      const tbody = document.getElementById('tabella-operatori-admin');
+      if (!tbody) return;
+
+      tbody.innerHTML = stato.operatori.map(op => {
+        const park = stato.parcheggi.find(p => p.id === op.parcheggioId);
+        const varco = park ? park.varchi.find(v => v.id === op.varcoId) : null;
+        const parkNome = park ? park.nome : '<span class="text-red-400 italic">Non assegnato</span>';
+        const varcoNome = varco ? varco.nome : '<span class="text-red-400 italic">Nessun varco</span>';
+        const badgeDir = varco && varco.direzione === 'USCITA' 
+          ? '<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold">🔴 USCITA</span>'
+          : '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">🟢 ENTRATA</span>';
+
+        return `
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
+                ${op.nome.charAt(0)}
+              </div>
+              ${op.nome}
+            </td>
+            <td class="py-3 px-4 font-mono font-bold text-amber-400">${op.pin}</td>
+            <td class="py-3 px-4 text-gray-200 font-medium">${parkNome}</td>
+            <td class="py-3 px-4 text-white font-bold">${varcoNome}</td>
+            <td class="py-3 px-4">${badgeDir}</td>
+            <td class="py-3 px-4 text-right">
+              <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                <!-- PULSANTE CAMBIA PARCHEGGIO -->
+                <button onclick="apriModalCambiaParcheggioOp('${op.id}')" class="px-2.5 py-1.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-gray-950 rounded-xl text-xs font-black transition-all flex items-center gap-1 shadow-md shadow-sky-500/20 active:scale-95" title="Sposta l'operatore in un altro parcheggio esistente">
+                  <i class="fa-solid fa-square-parking"></i> Cambia Parcheggio
+                </button>
+                <!-- PULSANTE CAMBIA VARCO / RIASSEGNAZIONE -->
+                <button onclick="apriModalModificaOperatore('${op.id}')" class="px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 rounded-xl text-xs font-black transition-all flex items-center gap-1 shadow-md shadow-amber-500/20 active:scale-95" title="Cambia il varco assegnato a questo operatore">
+                  <i class="fa-solid fa-arrows-rotate"></i> Cambia Varco
+                </button>
+                <button onclick="eliminaOperatore('${op.id}')" class="p-1.5 text-gray-500 hover:text-red-400 rounded-lg transition-colors ml-0.5" title="Rimuovi Operatore">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function apriModalAggiungiOperatore() {
+      document.getElementById('modal-op-nome').value = '';
+      document.getElementById('modal-op-pin').value = '';
+      
+      const selPark = document.getElementById('modal-op-parcheggio');
+      selPark.innerHTML = stato.parcheggi.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+
+      aggiornaTendinaVarchiModalOperatore();
+      document.getElementById('modal-operatore').classList.remove('hidden');
+    }
+
+    function aggiornaTendinaVarchiModalOperatore() {
+      const pId = document.getElementById('modal-op-parcheggio').value;
+      const selVarco = document.getElementById('modal-op-varco');
+      const park = stato.parcheggi.find(p => p.id === pId);
+      if (park) {
+        selVarco.innerHTML = park.varchi.map(v => `
+          <option value="${v.id}">${v.nome} [${v.direzione}]</option>
+        `).join('');
+      }
+    }
+
+    function chiudiModalOperatore() {
+      document.getElementById('modal-operatore').classList.add('hidden');
+    }
+
+    // MODAL MODIFICA VARCO DA ADMIN
+    function apriModalModificaOperatore(opId) {
+      const op = stato.operatori.find(o => o.id === opId);
+      if (!op) return;
+
+      document.getElementById('modal-edit-op-id').value = op.id;
+      document.getElementById('modal-edit-op-nome').value = op.nome;
+      document.getElementById('modal-edit-op-pin').value = op.pin;
+
+      const selPark = document.getElementById('modal-edit-op-parcheggio');
+      selPark.innerHTML = stato.parcheggi.map(p => `
+        <option value="${p.id}" ${p.id === op.parcheggioId ? 'selected' : ''}>${p.nome}</option>
+      `).join('');
+
+      aggiornaTendinaVarchiModalModifica(op.varcoId);
+      document.getElementById('modal-modifica-operatore').classList.remove('hidden');
+    }
+
+    function aggiornaTendinaVarchiModalModifica(preselectedVarcoId = null) {
+      const pId = document.getElementById('modal-edit-op-parcheggio').value;
+      const selVarco = document.getElementById('modal-edit-op-varco');
+      const park = stato.parcheggi.find(p => p.id === pId);
+
+      if (park && park.varchi.length > 0) {
+        selVarco.innerHTML = park.varchi.map(v => `
+          <option value="${v.id}" ${v.id === preselectedVarcoId ? 'selected' : ''}>${v.nome} [${v.direzione}]</option>
+        `).join('');
+      } else {
+        selVarco.innerHTML = '<option value="">Nessun varco disponibile</option>';
+      }
+    }
+
+    function chiudiModalModificaOperatore() {
+      document.getElementById('modal-modifica-operatore').classList.add('hidden');
+    }
+
+    // MODAL CAMBIA PARCHEGGIO OPERATORE RAPIDO
+    function apriModalCambiaParcheggioOp(opId) {
+      const op = stato.operatori.find(o => o.id === opId);
+      if (!op) return;
+
+      const parkAttuale = stato.parcheggi.find(p => p.id === op.parcheggioId);
+
+      document.getElementById('modal-cp-op-id').value = op.id;
+      document.getElementById('modal-cp-op-nome-badge').innerText = op.nome;
+      document.getElementById('modal-cp-op-park-attuale').innerText = parkAttuale ? parkAttuale.nome : 'Non assegnato';
+
+      const selPark = document.getElementById('modal-cp-nuovo-parcheggio');
+      selPark.innerHTML = stato.parcheggi.map(p => `
+        <option value="${p.id}" ${p.id === op.parcheggioId ? 'selected' : ''}>${p.nome} (${p.capienza} posti)</option>
+      `).join('');
+
+      aggiornaTendinaVarchiModalCambiaParcheggio(op.varcoId);
+      document.getElementById('modal-cambia-parcheggio-op').classList.remove('hidden');
+    }
+
+    function aggiornaTendinaVarchiModalCambiaParcheggio(preselectedVarcoId = null) {
+      const pId = document.getElementById('modal-cp-nuovo-parcheggio').value;
+      const selVarco = document.getElementById('modal-cp-nuovo-varco');
+      const park = stato.parcheggi.find(p => p.id === pId);
+
+      if (park && park.varchi.length > 0) {
+        selVarco.innerHTML = park.varchi.map(v => `
+          <option value="${v.id}" ${v.id === preselectedVarcoId ? 'selected' : ''}>${v.nome} [${v.direzione}]</option>
+        `).join('');
+      } else {
+        selVarco.innerHTML = '<option value="">Nessun varco configurato in questo parcheggio</option>';
+      }
+    }
+
+    function chiudiModalCambiaParcheggioOp() {
+      document.getElementById('modal-cambia-parcheggio-op').classList.add('hidden');
+    }
+
+    function confermaCambiaParcheggioOpModal() {
+      const opId = document.getElementById('modal-cp-op-id').value;
+      const nuovoParkId = document.getElementById('modal-cp-nuovo-parcheggio').value;
+      const nuovoVarcoId = document.getElementById('modal-cp-nuovo-varco').value;
+
+      if (!nuovoParkId || !nuovoVarcoId) {
+        mostraNotifica("Seleziona sia il parcheggio che il varco di destinazione.", "warning");
+        return;
+      }
+
+      const op = stato.operatori.find(o => o.id === opId);
+      const park = stato.parcheggi.find(p => p.id === nuovoParkId);
+
+      if (op && park) {
+        op.parcheggioId = nuovoParkId;
+        op.varcoId = nuovoVarcoId;
+
+        // Se l'operatore era correntemente loggato al Varco, aggiorna subito la postazione attiva
+        if (stato.sessioneVarco.autenticato && stato.sessioneVarco.operatore && stato.sessioneVarco.operatore.id === opId) {
+          stato.sessioneVarco.operatore = op;
+          stato.sessioneVarco.parcheggio = park;
+          stato.sessioneVarco.varco = park.varchi.find(v => v.id === nuovoVarcoId);
+          aggiornaInterfacciaVarcoCorrente();
+        }
+
+        salvaDatiInStorage();
+        chiudiModalCambiaParcheggioOp();
+        renderizzaTabellaOperatoriAdmin();
+        mostraNotifica(`${op.nome} trasferito a ${park.nome}!`, "success");
+      }
+    }
+
+    function confermaAggiornaOperatoreModal() {
+      const opId = document.getElementById('modal-edit-op-id').value;
+      const nome = document.getElementById('modal-edit-op-nome').value.trim();
+      const pin = document.getElementById('modal-edit-op-pin').value.trim();
+      const parcheggioId = document.getElementById('modal-edit-op-parcheggio').value;
+      const varcoId = document.getElementById('modal-edit-op-varco').value;
+
+      if (!nome || !pin || !parcheggioId || !varcoId) {
+        mostraNotifica("Compila tutti i campi per aggiornare l'operatore.", "warning");
+        return;
+      }
+
+      if (stato.operatori.some(o => o.pin === pin && o.id !== opId)) {
+        mostraNotifica("Questo PIN è già utilizzato da un altro operatore.", "error");
+        return;
+      }
+
+      const op = stato.operatori.find(o => o.id === opId);
+      if (op) {
+        op.nome = nome;
+        op.pin = pin;
+        op.parcheggioId = parcheggioId;
+        op.varcoId = varcoId;
+
+        // Se l'operatore modificato era attivo al varco, sincronizza subito
+        if (stato.sessioneVarco.autenticato && stato.sessioneVarco.operatore && stato.sessioneVarco.operatore.id === opId) {
+          stato.sessioneVarco.operatore = op;
+          stato.sessioneVarco.parcheggio = stato.parcheggi.find(p => p.id === parcheggioId);
+          stato.sessioneVarco.varco = stato.sessioneVarco.parcheggio.varchi.find(v => v.id === varcoId);
+          aggiornaInterfacciaVarcoCorrente();
+        }
+
+        salvaDatiInStorage();
+        chiudiModalModificaOperatore();
+        renderizzaTabellaOperatoriAdmin();
+        mostraNotifica(`Assegnazione di ${nome} aggiornata con successo!`, "success");
+      }
+    }
+
+    function confermaSalvaOperatoreModal() {
+      const nome = document.getElementById('modal-op-nome').value.trim();
+      const pin = document.getElementById('modal-op-pin').value.trim();
+      const parcheggioId = document.getElementById('modal-op-parcheggio').value;
+      const varcoId = document.getElementById('modal-op-varco').value;
+
+      if (!nome || !pin || !parcheggioId || !varcoId) {
+        mostraNotifica("Compila tutti i campi per registrare l'operatore.", "warning");
+        return;
+      }
+
+      if (stato.operatori.some(o => o.pin === pin)) {
+        mostraNotifica("Questo PIN è già associato a un altro operatore.", "error");
+        return;
+      }
+
+      stato.operatori.push({
+        id: 'OP-' + Date.now(),
+        nome: nome,
+        pin: pin,
+        parcheggioId: parcheggioId,
+        varcoId: varcoId
+      });
+
+      salvaDatiInStorage();
+      chiudiModalOperatore();
+      renderizzaTabellaOperatoriAdmin();
+      mostraNotifica(`Operatore ${nome} aggiunto e collegato al varco!`, "success");
+    }
+
+    function eliminaOperatore(opId) {
+      stato.operatori = stato.operatori.filter(o => o.id !== opId);
+      salvaDatiInStorage();
+      renderizzaTabellaOperatoriAdmin();
+      mostraNotifica("Operatore rimosso.", "info");
+    }
+
+    function renderizzaRegistroPassAnagrafica() {
+      const tbody = document.getElementById('tabella-anagrafica-pass');
+      if (!tbody) return;
+
+      tbody.innerHTML = stato.passRegistrati.map(p => {
+        const park = stato.parcheggi.find(x => x.id === p.parcheggioId) || { nome: '-' };
+        return `
+          <tr class="hover:bg-gray-800/40 font-mono">
+            <td class="py-2.5 px-3 font-black text-amber-400">${p.targa}</td>
+            <td class="py-2.5 px-3 font-sans text-gray-200">${p.nome} ${p.azienda ? '<span class="text-gray-500">(' + p.azienda + ')</span>' : ''}</td>
+            <td class="py-2.5 px-3 font-sans text-gray-400">${park.nome}</td>
+            <td class="py-2.5 px-3 text-gray-400 text-[11px]">${p.dataDa} / ${p.dataA}</td>
+            <td class="py-2.5 px-3 font-bold ${p.statoVeicolo === 'PRESENTE' ? 'text-emerald-400' : 'text-gray-500'}">
+              ${p.statoVeicolo === 'PRESENTE' ? '● DENTRO' : '○ FUORI'}
+            </td>
+            <td class="py-2.5 px-3 text-right">
+              <button onclick="rimuoviPass('${p.targa}')" class="text-gray-500 hover:text-red-400">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function rimuoviPass(targa) {
+      stato.passRegistrati = stato.passRegistrati.filter(p => p.targa !== targa);
+      salvaDatiInStorage();
+      renderizzaRegistroPassAnagrafica();
+      mostraNotifica(`Pass per ${targa} rimosso.`, "info");
+    }
+
+    function svuotaRegistroPass() {
+      stato.passRegistrati = [];
+      salvaDatiInStorage();
+      renderizzaRegistroPassAnagrafica();
+      mostraNotifica("Tutti i pass emessi sono stati rimossi.", "warning");
+    }
+
+    function esportaPassInCSV() {
+      if (stato.passRegistrati.length === 0) {
+        mostraNotifica("Nessun pass presente da esportare.", "warning");
+        return;
+      }
+      let csv = "ID,Targa,Intestatario,Azienda,Parcheggio,Data_Inizio,Data_Fine,Stato_Veicolo\n";
+      stato.passRegistrati.forEach(p => {
+        const park = stato.parcheggi.find(x => x.id === p.parcheggioId) || { nome: '-' };
+        csv += `"${p.id}","${p.targa}","${p.nome}","${p.azienda || ''}","${park.nome}","${p.dataDa}","${p.dataA}","${p.statoVeicolo}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `EXPORT_PASS_EVENTO_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      mostraNotifica("File CSV esportato con successo!", "success");
+    }
+  </script>
+</body>
+</html>
