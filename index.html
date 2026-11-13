@@ -2238,11 +2238,314 @@
     // =========================================================
     let datiInvitoAttivoCliente = null;
 
+    function codificaPayloadSicuro(obj) {
+      const jsonStr = JSON.stringify(obj);
+      const utf8Bytes = encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(_, p1) {
+        return String.fromCharCode('0x' + p1);
+      });
+      return btoa(utf8Bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function decodificaPayloadSicuro(str) {
+      let base64 = str.trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      const binary = atob(base64);
+      const percentEncoded = Array.prototype.map.call(binary, function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join('');
+      return JSON.parse(decodeURIComponent(percentEncoded));
+    }
+
     function popolaFormGeneratoreInviti() {
       const sel = document.getElementById('invito-cliente-parcheggio');
       if (sel) {
         sel.innerHTML = stato.parcheggi.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
       }
+      const oggi = new Date().toISOString().split('T')[0];
+      const dDa = document.getElementById('invito-cliente-da');
+      const dA = document.getElementById('invito-cliente-a');
+      if (dDa && !dDa.value) dDa.value = oggi;
+      if (dA && !dA.value) dA.value = oggi;
+    }
+
+    function generaLinkPersonalizzatoCliente() {
+      const azienda = document.getElementById('invito-cliente-nome').value.trim();
+      const parkId = document.getElementById('invito-cliente-parcheggio').value;
+      const dataDa = document.getElementById('invito-cliente-da').value;
+      const dataA = document.getElementById('invito-cliente-a').value;
+
+      if (!azienda || !parkId || !dataDa || !dataA) {
+        mostraNotifica("Compila Azienda/Cliente, Parcheggio e entrambe le date.", "warning");
+        return;
+      }
+      if (dataA < dataDa) {
+        mostraNotifica("La data di fine non può essere precedente alla data di inizio.", "error");
+        return;
+      }
+
+      const park = stato.parcheggi.find(p => p.id === parkId) || stato.parcheggi[0];
+      const tokenId = 'INV-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
+      const payload = {
+        tid: tokenId,
+        az: azienda,
+        pid: park.id,
+        pnm: park.nome,
+        pind: park.indirizzo,
+        pcrd: park.coords || '',
+        da: dataDa,
+        a: dataA
+      };
+
+      const encoded = codificaPayloadSicuro(payload);
+      const baseUrl = window.location.href.split('?')[0].split('#')[0];
+      const linkCompleto = `${baseUrl}?invite=${encoded}`;
+
+      document.getElementById('output-url-invito-cliente').value = linkCompleto;
+      document.getElementById('label-destinatario-link').innerText = azienda;
+      document.getElementById('label-date-link').innerText = `Dal ${dataDa} al ${dataA}`;
+      document.getElementById('box-risultato-link-invito').classList.remove('hidden');
+
+      mostraNotifica(`Link personalizzato generato per ${azienda}!`, "success");
+    }
+
+    function copiaLinkInvitoNegliAppunti() {
+      const input = document.getElementById('output-url-invito-cliente');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      mostraNotifica("Link copiato negli appunti!", "success");
+    }
+
+    function condividiLinkInvitoWhatsApp() {
+      const link = document.getElementById('output-url-invito-cliente').value;
+      const azienda = document.getElementById('label-destinatario-link').innerText;
+      const dateStr = document.getElementById('label-date-link').innerText;
+      const msg = `Gentile *${azienda}*,\n\n` +
+                  `Ecco il vostro link riservato per generare il Pass Auto con QR Code (${dateStr}):\n` +
+                  `${link}\n\n` +
+                  `Aprite il link, inserite la targa del veicolo e scaricate il vostro Pass ufficiale.`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function condividiLinkInvitoEmail() {
+      const link = document.getElementById('output-url-invito-cliente').value;
+      const azienda = document.getElementById('label-destinatario-link').innerText;
+      const dateStr = document.getElementById('label-date-link').innerText;
+      const subject = `Invito Registrazione Pass Parcheggio - ${azienda}`;
+      const body = `Gentile ${azienda},\n\n` +
+                   `Di seguito il link riservato per registrare la targa del vostro veicolo e scaricare il QR Pass (${dateStr}):\n\n` +
+                   `${link}\n\n` +
+                   `Nota: Il link è monouso. Una volta inserita la targa, potrete scaricare subito il vostro Pass.\n\n` +
+                   `Cordiali saluti,\nControl Room`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function ottieniChiaveTokenInvito(decoded) {
+      if (decoded && decoded.tid) {
+        return 'cr_invite_used_' + decoded.tid;
+      }
+      const raw = (decoded.az || '') + '|' + (decoded.pid || '') + '|' + (decoded.da || '') + '|' + (decoded.a || '');
+      let hash = 0;
+      for (let i = 0; i < raw.length; i++) {
+        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'cr_invite_used_LEGACY_' + Math.abs(hash);
+    }
+
+    function verificaEApriModalitaInvitoCliente() {
+      const params = new URLSearchParams(window.location.search);
+      let inviteToken = params.get('invite');
+      if (!inviteToken && window.location.hash.includes('invite=')) {
+        const match = window.location.hash.match(/invite=([^&]+)/);
+        if (match) inviteToken = match[1];
+      }
+      if (!inviteToken) return false;
+
+      try {
+        let decoded = null;
+        try {
+          decoded = decodificaPayloadSicuro(inviteToken);
+        } catch (e1) {
+          decoded = JSON.parse(decodeURIComponent(atob(inviteToken)));
+        }
+        datiInvitoAttivoCliente = decoded;
+
+        // Nascondi schermata di blocco staff e mostra portale self-service cliente
+        document.getElementById('schermata-blocco-globale').classList.add('hidden');
+        document.getElementById('schermata-invito-cliente').classList.remove('hidden');
+
+        document.getElementById('guest-invite-azienda').innerText = decoded.az || '-';
+        document.getElementById('guest-invite-parcheggio').innerHTML = `<i class="fa-solid fa-square-parking mr-1"></i> ${decoded.pnm || '-'}`;
+        document.getElementById('guest-invite-indirizzo').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> ${decoded.pind || '-'}`;
+        document.getElementById('guest-invite-date').innerText = `Dal ${decoded.da} al ${decoded.a}`;
+
+        // Controlla se questo link monouso è già stato utilizzato in precedenza (2ª apertura o successive)
+        const storageKey = ottieniChiaveTokenInvito(decoded);
+        let passPrecedente = null;
+
+        const passSalvatoRaw = localStorage.getItem(storageKey);
+        if (passSalvatoRaw) {
+          passPrecedente = JSON.parse(passSalvatoRaw);
+        } else if (window.location.hash && window.location.hash.includes('pass=')) {
+          try {
+            const hashMatch = window.location.hash.match(/pass=([^&]+)/);
+            if (hashMatch) {
+              passPrecedente = decodificaPayloadSicuro(hashMatch[1]);
+              localStorage.setItem(storageKey, JSON.stringify(passPrecedente));
+            }
+          } catch (errHash) {}
+        } else if (decoded.tid) {
+          const nelDb = stato.passRegistrati.find(p => p.inviteTid === decoded.tid);
+          if (nelDb) {
+            passPrecedente = nelDb;
+            localStorage.setItem(storageKey, JSON.stringify(passPrecedente));
+          }
+        }
+
+        if (passPrecedente) {
+          // DALLA SECONDA APERTURA IN POI: avviso link già usato + QR code già generato
+          document.getElementById('guest-form-container').classList.add('hidden');
+          document.getElementById('guest-link-usato-banner').classList.remove('hidden');
+          mostraPassClienteSuSchermo(passPrecedente);
+        } else {
+          // PRIMA APERTURA: mostra solo il modulo di registrazione
+          document.getElementById('guest-form-container').classList.remove('hidden');
+          document.getElementById('guest-link-usato-banner').classList.add('hidden');
+          document.getElementById('guest-pass-risultato').classList.add('hidden');
+        }
+
+        return true;
+      } catch (e) {
+        console.error("Token invito non valido:", e);
+        mostraNotifica("Il link invito risulta corrotto o incompleto.", "error");
+        return false;
+      }
+    }
+
+    function mostraPassClienteSuSchermo(passData) {
+      document.getElementById('guest-badge-azienda').innerText = passData.azienda;
+      document.getElementById('guest-badge-id').innerText = `#${passData.id}`;
+      document.getElementById('guest-badge-targa').innerText = passData.targa;
+      document.getElementById('guest-badge-park').innerText = passData.parkNome;
+      document.getElementById('guest-badge-conducente').innerText = passData.nome;
+      document.getElementById('guest-badge-validita').innerText = `${passData.dataDa} / ${passData.dataA}`;
+
+      const queryMappe = encodeURIComponent(passData.parkIndirizzo || '');
+      const coords = passData.parkCoords ? passData.parkCoords.replace(/\s+/g, '') : null;
+      document.getElementById('guest-nav-google').href = `https://www.google.com/maps/search/?api=1&query=${queryMappe}`;
+      document.getElementById('guest-nav-waze').href = coords ? `https://waze.com/ul?ll=${coords}&navigate=yes` : `https://waze.com/ul?q=${queryMappe}`;
+      document.getElementById('guest-nav-apple').href = `https://maps.apple.com/?q=${queryMappe}`;
+
+      const boxQr = document.getElementById('guest-box-qrcode');
+      renderizzaQrCodeAffidabile(boxQr, JSON.stringify({
+        id: passData.id,
+        targa: passData.targa,
+        nome: passData.nome,
+        azienda: passData.azienda,
+        parcheggioId: passData.parcheggioId,
+        dataDa: passData.dataDa,
+        dataA: passData.dataA
+      }), 155);
+
+      document.getElementById('guest-pass-risultato').classList.remove('hidden');
+    }
+
+    function renderizzaQrCodeAffidabile(containerEl, payloadText, sizePx) {
+      containerEl.innerHTML = '';
+      const tempDiv = document.createElement('div');
+      new QRCode(tempDiv, {
+        text: payloadText,
+        width: sizePx,
+        height: sizePx,
+        colorDark: "#030712",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      setTimeout(() => {
+        const canvas = tempDiv.querySelector('canvas');
+        if (canvas) {
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL('image/png');
+          img.alt = 'QR Code Pass';
+          img.style.width = sizePx + 'px';
+          img.style.height = sizePx + 'px';
+          img.style.display = 'block';
+          containerEl.innerHTML = '';
+          containerEl.appendChild(img);
+        } else {
+          containerEl.appendChild(tempDiv);
+        }
+      }, 60);
+    }
+
+    function generaPassSelfServiceCliente() {
+      if (!datiInvitoAttivoCliente) return;
+      const d = datiInvitoAttivoCliente;
+      const storageKey = ottieniChiaveTokenInvito(d);
+
+      // Se già usato, blocca e mostra il pass esistente
+      const giaUsato = localStorage.getItem(storageKey);
+      if (giaUsato) {
+        document.getElementById('guest-form-container').classList.add('hidden');
+        document.getElementById('guest-link-usato-banner').classList.remove('hidden');
+        mostraPassClienteSuSchermo(JSON.parse(giaUsato));
+        mostraNotifica("Link già usato: non più valido per nuove registrazioni.", "warning");
+        return;
+      }
+
+      const targa = document.getElementById('guest-input-targa').value.trim().toUpperCase();
+      const nomeConducente = document.getElementById('guest-input-nome').value.trim();
+
+      if (!targa || !nomeConducente) {
+        mostraNotifica("Inserisci sia la targa del veicolo che il nome del conducente.", "warning");
+        return;
+      }
+
+      caricaDatiDaStorage();
+
+      const passId = 'CR-' + Math.floor(100000 + Math.random() * 900000);
+      const nuovoPassCliente = {
+        id: passId,
+        inviteTid: d.tid || '',
+        targa: targa,
+        nome: nomeConducente,
+        azienda: d.az,
+        parcheggioId: d.pid,
+        parkNome: d.pnm,
+        parkIndirizzo: d.pind,
+        parkCoords: d.pcrd || '',
+        dataDa: d.da,
+        dataA: d.a,
+        telefono: '',
+        email: '',
+        statoVeicolo: 'ESTERNO'
+      };
+
+      // Salva il pass e segna il link come utilizzato per le aperture successive
+      localStorage.setItem(storageKey, JSON.stringify(nuovoPassCliente));
+      try {
+        const hashEncoded = codificaPayloadSicuro(nuovoPassCliente);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search + '#pass=' + hashEncoded);
+      } catch (eHist) {}
+
+      const idxEsistente = stato.passRegistrati.findIndex(p => p.targa === targa);
+      if (idxEsistente >= 0) {
+        stato.passRegistrati[idxEsistente] = nuovoPassCliente;
+      } else {
+        stato.passRegistrati.push(nuovoPassCliente);
+      }
+      salvaDatiInStorage();
+
+      // Alla prima generazione mostra il QR Code appena creato senza l'avviso di link già usato (che apparirà dalla 2ª apertura)
+      document.getElementById('guest-form-container').classList.add('hidden');
+      document.getElementById('guest-link-usato-banner').classList.add('hidden');
+      mostraPassClienteSuSchermo(nuovoPassCliente);
+      emettiSuonoFeedback('success');
+      mostraNotifica("Pass con QR Code generato con successo!", "success");
+    }
       const oggi = new Date().toISOString().split('T')[0];
       const dDa = document.getElementById('invito-cliente-da');
       const dA = document.getElementById('invito-cliente-a');
