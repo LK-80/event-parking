@@ -1186,6 +1186,7 @@
       }
 
       clearTimeout(window._toastTimer);
+      toast.classList.remove('-translate-y-20', 'opacity-0');
       window._toastTimer = setTimeout(() => {
         toast.classList.add('-translate-y-20', 'opacity-0');
       }, 3200);
