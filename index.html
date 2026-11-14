@@ -627,6 +627,40 @@
       <div class="flex gap-2 pt-2">
         <button onclick="chiudiModalParcheggio()" class="flex-1 py-2.5 bg-gray-800 text-gray-300 rounded-xl text-xs font-bold">Annulla</button>
         <button onclick="salvaNuovoParcheggioModal()" class="flex-1 py-2.5 bg-amber-500 text-gray-950 rounded-xl text-xs font-black">Salva</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-varco" class="fixed inset-0 bg-black/80 z-[150] hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-3">
+      <h3 class="text-base font-black text-white uppercase">Aggiungi Varco</h3>
+      <input id="modal-v-parcheggio-id" type="hidden">
+      <input id="modal-v-nome" type="text" placeholder="Nome Varco *" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
+      <select id="modal-v-direzione" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
+        <option value="ENTRATA">ENTRATA</option>
+        <option value="USCITA">USCITA</option>
+      </select>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalVarco()" class="flex-1 py-2.5 bg-gray-800 text-gray-300 rounded-xl text-xs font-bold">Annulla</button>
+        <button onclick="confermaAggiungiVarcoModal()" class="flex-1 py-2.5 bg-amber-500 text-gray-950 rounded-xl text-xs font-black">Aggiungi</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-operatore" class="fixed inset-0 bg-black/80 z-[150] hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-3">
+      <h3 class="text-base font-black text-white uppercase">Nuovo Operatore</h3>
+      <input id="modal-op-nome" type="text" placeholder="Nome Operatore *" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
+      <input id="modal-op-pin" type="text" placeholder="PIN (es: 1103) *" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
+      <select id="modal-op-parcheggio" onchange="aggiornaTendinaVarchiModalOperatore()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm"></select>
+      <select id="modal-op-varco" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm"></select>
+      <div class="flex gap-2 pt-2">
+        <button onclick="chiudiModalOperatore()" class="flex-1 py-2.5 bg-gray-800 text-gray-300 rounded-xl text-xs font-bold">Annulla</button>
+        <button onclick="confermaSalvaOperatoreModal()" class="flex-1 py-2.5 bg-amber-500 text-gray-950 rounded-xl text-xs font-black">Salva</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SINCRONIZZAZIONE CLOUD PUBBLICA REAL-TIME (PER GITHUB PAGES & CROSS-DEVICE) -->
   <script>
     window._cloudSync = {
@@ -1380,6 +1414,17 @@
     }
     function condividiLinkInvitoEmail() {
       const link = document.getElementById('output-url-invito-cliente').value;
+      const azienda = document.getElementById('label-destinatario-link').innerText;
+      const subject = `Invito Registrazione Pass Auto - ${azienda}`;
+      const body = `Gentile ${azienda},\n\nClicca sul seguente link riservato per registrare la targa del tuo veicolo e scaricare il QR Pass:\n${link}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function ottieniChiaveTokenInvito(d) {
+      if (d && d.tid) return 'cr_invite_used_' + d.tid;
+      return 'cr_invite_used_' + btoa(encodeURIComponent((d.az || '') + '|' + (d.pid || '') + '|' + (d.da || '') + '|' + (d.a || ''))).slice(0, 32);
+    }
+
     async function verificaEApriModalitaInvitoCliente() {
       const params = new URLSearchParams(window.location.search);
       const inviteToken = params.get('invite');
@@ -1420,6 +1465,18 @@
       document.getElementById('guest-badge-id').innerText = `#${passData.id}`;
       document.getElementById('guest-badge-targa').innerText = passData.targa;
       document.getElementById('guest-badge-park').innerText = passData.parkNome;
+      document.getElementById('guest-badge-conducente').innerText = passData.nome;
+      document.getElementById('guest-badge-validita').innerText = `${passData.dataDa} - ${passData.dataA}`;
+
+      const q = encodeURIComponent(passData.parkIndirizzo || passData.parkNome);
+      document.getElementById('guest-nav-google').href = `https://www.google.com/maps/search/?api=1&query=${q}`;
+      document.getElementById('guest-nav-waze').href = `https://waze.com/ul?q=${q}`;
+      document.getElementById('guest-nav-apple').href = `https://maps.apple.com/?q=${q}`;
+
+      renderizzaQrCodeAffidabile(document.getElementById('guest-box-qrcode'), JSON.stringify(passData), 155);
+      document.getElementById('guest-pass-risultato').classList.remove('hidden');
+    }
+
     async function generaPassSelfServiceCliente() {
       if (!datiInvitoAttivoCliente) return;
       const d = datiInvitoAttivoCliente;
