@@ -665,97 +665,102 @@
   <script>
     window._cloudSync = {
       attivo: true,
-      endpoint: 'https://kvdb.io/A29xKp9mLqR7vT4wYnB8zC', // Bucket pubblico condiviso ControlRoom
+      // Endpoint npoint.io pubblico dedicato per sincronizzazione istantanea ControlRoom
+      endpoint: 'https://api.npoint.io/7b9c4e2d8a1f3c6b5e90',
       usedTokens: {}
     };
 
-    async function sincronizzaDaCloudPubblico() {
+    async function leggiDatiCloudSicuri() {
       try {
-        const res = await fetch(window._cloudSync.endpoint + '/passes?_t=' + Date.now());
-        if (!res.ok) return;
-        const datiCloud = await res.json();
-        if (!datiCloud || typeof datiCloud !== 'object') return;
-
-        let modificato = false;
-        window._cloudSync.usedTokens = datiCloud.usedTokens || {};
-
-        if (Array.isArray(datiCloud.passRegistrati)) {
-          datiCloud.passRegistrati.forEach(pCloud => {
-            if (!pCloud) return;
-            const idx = window.stato.passRegistrati.findIndex(x =>
-              (pCloud.inviteTid && x.inviteTid === pCloud.inviteTid) || x.id === pCloud.id
-            );
-            if (idx >= 0) {
-              // Se nel cloud ha già la targa compilata mentre in locale è ancora IN ATTESA TARGA, aggiorna!
-              if (window.stato.passRegistrati[idx].statoVeicolo === 'INVITATO' && pCloud.statoVeicolo !== 'INVITATO') {
-                window.stato.passRegistrati[idx] = pCloud;
-                modificato = true;
-              }
-            } else {
-              window.stato.passRegistrati.unshift(pCloud);
-              modificato = true;
-            }
-          });
-        }
-
-        if (modificato) {
-          localStorage.setItem(window.STORAGE_KEY, JSON.stringify({
-            config: window.stato.config,
-            parcheggi: window.stato.parcheggi,
-            operatori: window.stato.operatori,
-            passRegistrati: window.stato.passRegistrati,
-            logTransiti: window.stato.logTransiti
-          }));
-          if (typeof window.renderizzaRegistroPassAnagrafica === 'function') {
-            window.renderizzaRegistroPassAnagrafica();
-          }
-        }
-      } catch (e) {}
+        const res = await fetch(window._cloudSync.endpoint + '?_t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return (data && typeof data === 'object') ? data : null;
+      } catch (e) {
+        return null;
+      }
     }
 
-    window.salvaStatoNelCloudPubblico = async function(nuovoPassObj, tokenUsatoId) {
+    async function scriviDatiCloudSicuri(datiCloud) {
       try {
-        let datiCloud = { passRegistrati: [], usedTokens: {} };
-        try {
-          const getRes = await fetch(window._cloudSync.endpoint + '/passes?_t=' + Date.now());
-          if (getRes.ok) {
-            const parsed = await getRes.json();
-            if (parsed && typeof parsed === 'object') datiCloud = parsed;
-          }
-        } catch (e) {}
-
-        if (!Array.isArray(datiCloud.passRegistrati)) datiCloud.passRegistrati = [];
-        if (!datiCloud.usedTokens) datiCloud.usedTokens = {};
-
-        if (tokenUsatoId && nuovoPassObj) {
-          datiCloud.usedTokens[tokenUsatoId] = nuovoPassObj;
-        }
-
-        if (nuovoPassObj) {
-          const idx = datiCloud.passRegistrati.findIndex(x =>
-            (nuovoPassObj.inviteTid && x.inviteTid === nuovoPassObj.inviteTid) || x.id === nuovoPassObj.id
-          );
-          if (idx >= 0) datiCloud.passRegistrati[idx] = nuovoPassObj;
-          else datiCloud.passRegistrati.unshift(nuovoPassObj);
-        }
-
-        await fetch(window._cloudSync.endpoint + '/passes', {
+        await fetch(window._cloudSync.endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(datiCloud)
         });
       } catch (e) {}
+    }
+
+    async function sincronizzaDaCloudPubblico() {
+      const datiCloud = await leggiDatiCloudSicuri();
+      if (!datiCloud) return;
+
+      let modificato = false;
+      window._cloudSync.usedTokens = datiCloud.usedTokens || {};
+
+      if (Array.isArray(datiCloud.passRegistrati)) {
+        datiCloud.passRegistrati.forEach(pCloud => {
+          if (!pCloud) return;
+          const idx = window.stato.passRegistrati.findIndex(x =>
+            (pCloud.inviteTid && x.inviteTid === pCloud.inviteTid) || x.id === pCloud.id
+          );
+          if (idx >= 0) {
+            if (window.stato.passRegistrati[idx].statoVeicolo === 'INVITATO' && pCloud.statoVeicolo !== 'INVITATO') {
+              window.stato.passRegistrati[idx] = pCloud;
+              modificato = true;
+            }
+          } else if (pCloud.statoVeicolo !== 'INVITATO') {
+            window.stato.passRegistrati.unshift(pCloud);
+            modificato = true;
+          }
+        });
+      }
+
+      if (modificato) {
+        localStorage.setItem(window.STORAGE_KEY, JSON.stringify({
+          config: window.stato.config,
+          parcheggi: window.stato.parcheggi,
+          operatori: window.stato.operatori,
+          passRegistrati: window.stato.passRegistrati,
+          logTransiti: window.stato.logTransiti
+        }));
+        if (typeof window.renderizzaRegistroPassAnagrafica === 'function') {
+          window.renderizzaRegistroPassAnagrafica();
+        }
+      }
+    }
+
+    window.salvaStatoNelCloudPubblico = async function(nuovoPassObj, tokenUsatoId) {
+      let datiCloud = await leggiDatiCloudSicuri();
+      if (!datiCloud) datiCloud = { passRegistrati: [], usedTokens: {} };
+      if (!Array.isArray(datiCloud.passRegistrati)) datiCloud.passRegistrati = [];
+      if (!datiCloud.usedTokens) datiCloud.usedTokens = {};
+
+      // Il token viene marcato come bruciato SOLO quando viene passato un tokenUsatoId valido (al click di generazione)
+      if (tokenUsatoId && nuovoPassObj && nuovoPassObj.statoVeicolo !== 'INVITATO') {
+        datiCloud.usedTokens[tokenUsatoId] = nuovoPassObj;
+      }
+
+      if (nuovoPassObj) {
+        const idx = datiCloud.passRegistrati.findIndex(x =>
+          (nuovoPassObj.inviteTid && x.inviteTid === nuovoPassObj.inviteTid) || x.id === nuovoPassObj.id
+        );
+        if (idx >= 0) datiCloud.passRegistrati[idx] = nuovoPassObj;
+        else datiCloud.passRegistrati.unshift(nuovoPassObj);
+      }
+
+      await scriviDatiCloudSicuri(datiCloud);
     };
 
     window.verificaTokenUsatoNelCloud = async function(tokenId) {
-      try {
-        const res = await fetch(window._cloudSync.endpoint + '/passes?_t=' + Date.now());
-        if (!res.ok) return null;
-        const datiCloud = await res.json();
-        if (datiCloud && datiCloud.usedTokens && datiCloud.usedTokens[tokenId]) {
-          return datiCloud.usedTokens[tokenId];
+      if (!tokenId) return null;
+      const datiCloud = await leggiDatiCloudSicuri();
+      if (datiCloud && datiCloud.usedTokens && datiCloud.usedTokens[tokenId]) {
+        const salvato = datiCloud.usedTokens[tokenId];
+        if (salvato && salvato.targa && salvato.targa !== 'IN ATTESA TARGA') {
+          return salvato;
         }
-      } catch (e) {}
+      }
       return null;
     };
 
