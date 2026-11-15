@@ -485,10 +485,6 @@
               <input id="invito-cliente-nome" type="text" placeholder="Es: Azienda Mario Rossi" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
             </div>
             <div>
-              <label class="block font-bold text-amber-400 uppercase mb-1">Email Cliente (Destinatario Invito) *</label>
-              <input id="invito-cliente-email" type="email" required placeholder="es: cliente@azienda.it" class="w-full bg-gray-950 border border-amber-500/40 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
-            </div>
-            <div>
               <label class="block font-bold text-gray-400 uppercase mb-1">Targa Veicolo (Opzionale)</label>
               <input id="invito-cliente-targa" type="text" placeholder="Es: AA123BB (oppure compila il cliente)" maxlength="10" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white font-bold uppercase text-sm">
             </div>
@@ -496,7 +492,7 @@
               <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato *</label>
               <select id="invito-cliente-parcheggio" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm"></select>
             </div>
-            <div class="sm:col-span-2 grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block font-bold text-gray-400 uppercase mb-1">Valido Dal *</label>
                 <input id="invito-cliente-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
@@ -585,6 +581,10 @@
           <input id="input-bs-pwd-bs" type="text" placeholder="Nessuna password (accesso diretto)" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-purple-300 font-mono text-sm">
         </div>
         <button onclick="salvaTutteLePasswordBS()" class="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-xl text-sm uppercase shadow-lg">SALVA IMPOSTAZIONI PASSWORD</button>
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-800">
+          <button onclick="ripristinaTutteLePassword('12345')" class="py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-400 rounded-xl text-xs font-bold">Reset Tutte a 12345</button>
+          <button onclick="ripristinaTutteLePassword('')" class="py-2.5 bg-gray-800 hover:bg-gray-700 text-emerald-400 rounded-xl text-xs font-bold">Svuota Tutte (Nessuna Password)</button>
+        </div>
       </div>
     </section>
   </main>
@@ -597,12 +597,11 @@
       </div>
       <h3 class="text-base font-black text-white uppercase">Recupero Password Emergenza</h3>
       <p class="text-xs text-gray-400 leading-relaxed">
-        Inserisci il <strong class="text-amber-400">Codice Master PUK</strong> per reimpostare tutte le password al valore predefinito (<span class="font-mono text-white">12345</span>) oppure svuotarle:
+        Scegli una delle opzioni qui sotto per sbloccare il sistema e reimpostare tutte le password:
       </p>
-      <input id="input-codice-puk-recupero" type="text" placeholder="Codice PUK (es: LUCA-RESET)" class="w-full text-center bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-amber-400 font-mono font-bold text-sm uppercase">
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="eseguiResetPasswordEmergenza('12345')" class="py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 rounded-xl text-xs font-black">Reimposta a 12345</button>
-        <button onclick="eseguiResetPasswordEmergenza('')" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black">Rimuovi Password</button>
+      <div class="grid grid-cols-1 gap-2">
+        <button onclick="eseguiResetPasswordEmergenza('12345')" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-gray-950 rounded-xl text-xs font-black uppercase">Reimposta Tutte le Password a 12345</button>
+        <button onclick="eseguiResetPasswordEmergenza('')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase">Rimuovi Tutte le Password (Accesso Libero)</button>
       </div>
       <button onclick="chiudiModalRecuperoPassword()" class="w-full py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold">Annulla</button>
     </div>
@@ -887,27 +886,26 @@
     }
 
     function apriModalRecuperoPassword() {
-      document.getElementById('input-codice-puk-recupero').value = '';
-      document.getElementById('modal-recupero-password').classList.remove('hidden');
+      const modal = document.getElementById('modal-recupero-password');
+      if (modal) modal.classList.remove('hidden');
     }
     function chiudiModalRecuperoPassword() {
-      document.getElementById('modal-recupero-password').classList.add('hidden');
+      const modal = document.getElementById('modal-recupero-password');
+      if (modal) modal.classList.add('hidden');
     }
     function eseguiResetPasswordEmergenza(nuovoValore) {
-      const puk = document.getElementById('input-codice-puk-recupero').value.trim().toUpperCase();
-      if (puk !== 'LUCA-RESET' && puk !== 'PUK-CONTROLROOM') {
-        mostraNotifica("Codice Master PUK non valido. Usa: LUCA-RESET", "error");
-        return;
-      }
       stato.config.pwdGlobaleApp = nuovoValore;
       stato.config.pwdMasterVarco = nuovoValore;
       stato.config.pwdMasterAdmin = nuovoValore;
       stato.config.pwdMasterBS = nuovoValore;
       salvaDatiInStorage();
       chiudiModalRecuperoPassword();
+      const inputGlob = document.getElementById('input-password-globale');
+      if (inputGlob) inputGlob.value = nuovoValore;
       if (nuovoValore === '') {
         stato.appSbloccata = true;
-        document.getElementById('schermata-blocco-globale').classList.add('hidden');
+        const blocco = document.getElementById('schermata-blocco-globale');
+        if (blocco) blocco.classList.add('hidden');
         mostraNotifica("Tutte le password sono state rimosse!", "success");
       } else {
         mostraNotifica("Tutte le password reimpostate a: 12345", "success");
@@ -1182,49 +1180,14 @@
       salvaDatiInStorage();
       mostraNotifica("Impostazioni password salvate! (I campi vuoti non richiedono password)", "success");
     }
-    function chiudiModalLoginAdmin() { document.getElementById('modal-login-admin').classList.add('hidden'); }
-    function confermaLoginAdminModal() {
-      const pwd = document.getElementById('input-login-admin-pwd').value.trim();
-      if (pwd === stato.config.pwdMasterAdmin) {
-        stato.amministrazioneAutenticata = true;
-        chiudiModalLoginAdmin();
-        cambiaSchedaPrincipale('admin');
-        renderizzaTuttoAdmin();
-      } else {
-        mostraNotifica("Password Admin errata.", "error");
-      }
-    }
-
-    function apriModalLoginBS() {
-      if (stato.bsAutenticato) { cambiaSchedaPrincipale('bs'); popolaCampiPasswordBS(); return; }
-      document.getElementById('input-login-bs-pwd').value = '';
-      document.getElementById('modal-login-bs').classList.remove('hidden');
-    }
-    function chiudiModalLoginBS() { document.getElementById('modal-login-bs').classList.add('hidden'); }
-    function confermaLoginBSModal() {
-      const pwd = document.getElementById('input-login-bs-pwd').value.trim();
-      if (pwd === (stato.config.pwdMasterBS || '12345') || pwd === stato.config.pwdMasterAdmin) {
-        stato.bsAutenticato = true;
-        chiudiModalLoginBS();
-        cambiaSchedaPrincipale('bs');
-        popolaCampiPasswordBS();
-      } else {
-        mostraNotifica("Password BS errata.", "error");
-      }
-    }
-    function popolaCampiPasswordBS() {
-      document.getElementById('input-bs-pwd-globale').value = stato.config.pwdGlobaleApp || '12345';
-      document.getElementById('input-bs-pwd-varco').value = stato.config.pwdMasterVarco || '12345';
-      document.getElementById('input-bs-pwd-admin').value = stato.config.pwdMasterAdmin || '12345';
-      document.getElementById('input-bs-pwd-bs').value = stato.config.pwdMasterBS || '12345';
-    }
-    function salvaTutteLePasswordBS() {
-      stato.config.pwdGlobaleApp = document.getElementById('input-bs-pwd-globale').value.trim() || '12345';
-      stato.config.pwdMasterVarco = document.getElementById('input-bs-pwd-varco').value.trim() || '12345';
-      stato.config.pwdMasterAdmin = document.getElementById('input-bs-pwd-admin').value.trim() || '12345';
-      stato.config.pwdMasterBS = document.getElementById('input-bs-pwd-bs').value.trim() || '12345';
+    function ripristinaTutteLePassword(valore) {
+      stato.config.pwdGlobaleApp = valore;
+      stato.config.pwdMasterVarco = valore;
+      stato.config.pwdMasterAdmin = valore;
+      stato.config.pwdMasterBS = valore;
       salvaDatiInStorage();
-      mostraNotifica("Password aggiornate!", "success");
+      popolaCampiPasswordBS();
+      mostraNotifica(valore === '' ? "Tutte le password disattivate!" : "Tutte le password reimpostate a 12345!", "success");
     }
 
     // CREAZIONE PASS STANDARD
@@ -1384,21 +1347,13 @@
 
     function generaLinkPersonalizzatoCliente() {
       const azienda = document.getElementById('invito-cliente-nome').value.trim();
-      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
       const targaInserita = document.getElementById('invito-cliente-targa').value.trim().toUpperCase();
       const parkId = document.getElementById('invito-cliente-parcheggio').value;
       const dataDa = document.getElementById('invito-cliente-da').value;
       const dataA = document.getElementById('invito-cliente-a').value;
 
-      if (!azienda || !emailCliente || !parkId || !dataDa || !dataA) {
-        mostraNotifica("Compila tutti i campi obbligatori (*), inclusa l'Email Cliente.", "warning");
-        if (!emailCliente) document.getElementById('invito-cliente-email').focus();
-        return;
-      }
-
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
-        mostraNotifica("Inserisci un indirizzo Email Cliente valido.", "warning");
-        document.getElementById('invito-cliente-email').focus();
+      if (!azienda || !parkId || !dataDa || !dataA) {
+        mostraNotifica("Compila tutti i campi obbligatori (*).", "warning");
         return;
       }
 
@@ -1412,7 +1367,6 @@
         tid: tokenId,
         pidPass: passId,
         az: azienda,
-        cmail: emailCliente,
         targaPre: targaInserita,
         pid: park.id,
         pnm: park.nome,
@@ -1428,7 +1382,6 @@
         targa: targaRecord,
         nome: azienda,
         azienda: azienda,
-        email: emailCliente,
         parcheggioId: park.id,
         parkNome: park.nome,
         dataDa: dataDa,
@@ -1444,7 +1397,7 @@
       const linkCompleto = `${baseUrl}?invite=${encoded}`;
 
       document.getElementById('output-url-invito-cliente').value = linkCompleto;
-      document.getElementById('label-destinatario-link').innerText = `${azienda} (${emailCliente})`;
+      document.getElementById('label-destinatario-link').innerText = azienda;
       document.getElementById('label-date-link').innerText = `Dal ${dataDa} al ${dataA}`;
       document.getElementById('box-risultato-link-invito').classList.remove('hidden');
       mostraNotifica(`Pass confermato automaticamente nel Registro Pass e link generato!`, "success");
@@ -1457,27 +1410,17 @@
       mostraNotifica("Link copiato negli appunti!", "success");
     }
     function condividiLinkInvitoWhatsApp() {
-      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
-      if (!emailCliente) {
-        mostraNotifica("Inserisci l'Email Cliente prima di inviare il link.", "warning");
-        return;
-      }
       const link = document.getElementById('output-url-invito-cliente').value;
       const azienda = document.getElementById('label-destinatario-link').innerText;
       const msg = `Gentile *${azienda}*,\nEcco il link riservato per generare il vostro Pass Auto con QR Code:\n${link}`;
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     }
     function condividiLinkInvitoEmail() {
-      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
-      if (!emailCliente) {
-        mostraNotifica("Inserisci l'Email Cliente prima di inviare il link.", "warning");
-        return;
-      }
       const link = document.getElementById('output-url-invito-cliente').value;
       const azienda = document.getElementById('label-destinatario-link').innerText;
       const subject = `Invito Registrazione Pass Auto - ${azienda}`;
       const body = `Gentile ${azienda},\n\nClicca sul seguente link riservato per registrare la targa del tuo veicolo e scaricare il QR Pass:\n${link}`;
-      window.location.href = `mailto:${encodeURIComponent(emailCliente)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     function ottieniChiaveTokenInvito(d) {
