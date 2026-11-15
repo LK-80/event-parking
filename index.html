@@ -89,6 +89,13 @@
         </button>
       </div>
 
+      <div id="guest-pass-creato-banner" class="hidden bg-emerald-950/90 border-2 border-emerald-500/60 rounded-3xl p-4 text-center space-y-1 shadow-xl">
+        <div class="text-xs font-black text-emerald-300 uppercase tracking-wider flex items-center justify-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i> PASS GENERATO CON SUCCESSO
+        </div>
+        <p class="text-[11px] text-emerald-100/80">Salva subito il tuo Pass in PDF o Immagine prima di chiudere questa pagina.</p>
+      </div>
+
       <div id="guest-link-usato-banner" class="hidden bg-amber-950/90 border-2 border-amber-500/60 rounded-3xl p-5 text-center space-y-2 shadow-xl">
         <div class="w-11 h-11 mx-auto rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-lg">
           <i class="fa-solid fa-circle-exclamation"></i>
@@ -1313,42 +1320,63 @@
       if (!el) return;
       mostraNotifica("Generazione PDF con QR Code in corso...", "info");
       setTimeout(() => {
-        html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false }).then(canvas => {
-          const imgData = canvas.toDataURL('image/png');
-          const wrapper = document.createElement('div');
-          wrapper.style.position = 'fixed';
-          wrapper.style.left = '-9999px';
-          wrapper.style.top = '0';
-          wrapper.style.width = '500px';
-          wrapper.style.backgroundColor = bgColor;
-          wrapper.style.padding = '20px';
-          const img = document.createElement('img');
-          img.src = imgData;
-          img.style.width = '100%';
-          img.style.display = 'block';
-          wrapper.appendChild(img);
-          document.body.appendChild(wrapper);
-
-          html2pdf()
-            .set({
-              margin: 10,
-              filename: filename,
-              image: { type: 'png', quality: 1 },
-              html2canvas: { scale: 2, useCORS: true },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            })
-            .from(wrapper)
-            .save()
-            .then(() => {
-              document.body.removeChild(wrapper);
-              mostraNotifica("PDF scaricato correttamente!", "success");
-            })
-            .catch(() => {
-              if (wrapper.parentNode) document.body.removeChild(wrapper);
-              mostraNotifica("Errore nella creazione del PDF.", "error");
-            });
+        html2canvas(el, {
+          scale: 2,
+          backgroundColor: bgColor || '#111827',
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: -window.scrollY
+        }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          const opt = {
+            margin: 10,
+            filename: filename,
+            image: { type: 'png', quality: 1.0 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          html2pdf().set(opt).from(el).toPdf().get('pdf').then(pdf => {
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const imgWidth = pageWidth - 30;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            pdf.deletePage(1);
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 15, 15, imgWidth, imgHeight);
+            pdf.save(filename);
+            mostraNotifica("PDF scaricato correttamente!", "success");
+          }).catch(() => {
+            mostraNotifica("Errore nella creazione del PDF.", "error");
+          });
+        }).catch(() => {
+          mostraNotifica("Errore acquisizione badge per PDF.", "error");
         });
-      }, 150);
+      }, 200);
+    }
+
+    function esportaElementoInPngAffidabile(el, filename, bgColor) {
+      if (!el) return;
+      mostraNotifica("Generazione immagine PNG con QR Code...", "info");
+      setTimeout(() => {
+        html2canvas(el, {
+          scale: 2,
+          backgroundColor: bgColor || '#111827',
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: -window.scrollY
+        }).then(canvas => {
+          const dataUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          mostraNotifica("Immagine PNG scaricata!", "success");
+        });
+      }, 200);
     }
 
     function esportaElementoInPngAffidabile(el, filename, bgColor) {
@@ -1527,6 +1555,7 @@
 
         // Assicura che alla PRIMA apertura venga mostrato solo il form e MAI "Link già usato"
         document.getElementById('guest-form-container').classList.remove('hidden');
+        document.getElementById('guest-pass-creato-banner').classList.add('hidden');
         document.getElementById('guest-link-usato-banner').classList.add('hidden');
         document.getElementById('guest-pass-risultato').classList.add('hidden');
 
@@ -1614,10 +1643,11 @@
       renderizzaRegistroPassAnagrafica();
 
       document.getElementById('guest-form-container').classList.add('hidden');
-      document.getElementById('guest-link-usato-banner').classList.remove('hidden');
+      document.getElementById('guest-link-usato-banner').classList.add('hidden');
+      document.getElementById('guest-pass-creato-banner').classList.remove('hidden');
       mostraPassClienteSuSchermo(nuovoPassCliente);
       emettiSuonoFeedback('success');
-      mostraNotifica("Pass con QR Code generato! Il link invito è ora disattivato.", "success");
+      mostraNotifica("Pass con QR Code generato con successo!", "success");
     }
 
     function scaricaPassClientePDF() {
