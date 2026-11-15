@@ -480,23 +480,41 @@
 
       <div id="subsezione-inviti" class="hidden space-y-6">
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 sm:p-6 space-y-4">
-          <h3 class="text-base font-extrabold text-white border-b border-gray-800 pb-3">Genera Link Personalizzato per Cliente / Azienda</h3>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-800 pb-3">
+            <h3 class="text-base font-extrabold text-white">Genera Link Personalizzato per Cliente / Azienda</h3>
+            <span class="text-[11px] text-amber-400 font-semibold">Conferma automatica precompilata</span>
+          </div>
+
+          <div class="bg-gray-950/90 border border-amber-500/30 rounded-xl p-3.5 space-y-2 text-xs">
+            <label class="block font-bold text-amber-400 uppercase">Email Organizzatore (per ricevere le conferme pass dei clienti) *</label>
+            <div class="flex gap-2">
+              <input id="admin-email-organizzatore" type="email" placeholder="es: segreteria@evento.it" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2 text-white text-sm focus:border-amber-500 focus:outline-none">
+              <button onclick="salvaEmailOrganizzatore()" class="px-4 py-2 bg-amber-500 text-gray-950 font-black rounded-xl text-xs uppercase shrink-0">Salva</button>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
               <label class="block font-bold text-gray-400 uppercase mb-1">Nome Cliente / Azienda *</label>
               <input id="invito-cliente-nome" type="text" placeholder="Es: Azienda Mario Rossi" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
             </div>
             <div>
+              <label class="block font-bold text-amber-400 uppercase mb-1">Email Cliente (Destinatario Invito) *</label>
+              <input id="invito-cliente-email" type="email" required placeholder="es: cliente@azienda.it" class="w-full bg-gray-950 border border-amber-500/40 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-amber-500 focus:outline-none">
+            </div>
+            <div>
               <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato *</label>
               <select id="invito-cliente-parcheggio" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm"></select>
             </div>
-            <div>
-              <label class="block font-bold text-gray-400 uppercase mb-1">Data Inizio Validità *</label>
-              <input id="invito-cliente-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
-            </div>
-            <div>
-              <label class="block font-bold text-gray-400 uppercase mb-1">Data Fine Validità *</label>
-              <input id="invito-cliente-a" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-gray-400 uppercase mb-1">Valido Dal *</label>
+                <input id="invito-cliente-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+              </div>
+              <div>
+                <label class="block font-bold text-gray-400 uppercase mb-1">Valido Al *</label>
+                <input id="invito-cliente-a" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+              </div>
             </div>
           </div>
 
@@ -694,6 +712,7 @@
       },
       config: {
         nomeEvento: 'FIERA & PALASPORT',
+        emailOrganizzatore: '',
         pwdGlobaleApp: '12345',
         pwdMasterVarco: '12345',
         pwdMasterAdmin: '12345',
@@ -1257,6 +1276,8 @@
     function popolaFormGeneratoreInviti() {
       const sel = document.getElementById('invito-cliente-parcheggio');
       if (sel) sel.innerHTML = stato.parcheggi.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+      const emailOrgInput = document.getElementById('admin-email-organizzatore');
+      if (emailOrgInput) emailOrgInput.value = stato.config.emailOrganizzatore || '';
       const oggi = new Date().toISOString().split('T')[0];
       const dDa = document.getElementById('invito-cliente-da');
       const dA = document.getElementById('invito-cliente-a');
@@ -1264,21 +1285,52 @@
       if (dA && !dA.value) dA.value = oggi;
     }
 
+    function salvaEmailOrganizzatore() {
+      const val = document.getElementById('admin-email-organizzatore').value.trim();
+      stato.config.emailOrganizzatore = val;
+      salvaDatiInStorage();
+      mostraNotifica(val ? `Email organizzatore salvata: ${val}` : "Email organizzatore rimossa.", "success");
+    }
+
     function generaLinkPersonalizzatoCliente() {
       const azienda = document.getElementById('invito-cliente-nome').value.trim();
+      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
+      const emailOrg = document.getElementById('admin-email-organizzatore').value.trim();
       const parkId = document.getElementById('invito-cliente-parcheggio').value;
       const dataDa = document.getElementById('invito-cliente-da').value;
       const dataA = document.getElementById('invito-cliente-a').value;
 
-      if (!azienda || !parkId || !dataDa || !dataA) {
-        mostraNotifica("Compila Azienda/Cliente, Parcheggio e date.", "warning");
+      if (!azienda || !emailCliente || !parkId || !dataDa || !dataA) {
+        mostraNotifica("Compila tutti i campi obbligatori (*), inclusa l'Email Cliente.", "warning");
+        if (!emailCliente) document.getElementById('invito-cliente-email').focus();
         return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
+        mostraNotifica("Inserisci un indirizzo Email Cliente valido.", "warning");
+        document.getElementById('invito-cliente-email').focus();
+        return;
+      }
+
+      if (emailOrg !== (stato.config.emailOrganizzatore || '')) {
+        stato.config.emailOrganizzatore = emailOrg;
       }
 
       caricaDatiDaStorage();
       const park = stato.parcheggi.find(p => p.id === parkId) || stato.parcheggi[0];
       const tokenId = 'INV-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
-      const payload = { tid: tokenId, az: azienda, pid: park.id, pnm: park.nome, pind: park.indirizzo, pcrd: park.coords || '', da: dataDa, a: dataA };
+      const payload = {
+        tid: tokenId,
+        az: azienda,
+        cmail: emailCliente,
+        orgmail: emailOrg,
+        pid: park.id,
+        pnm: park.nome,
+        pind: park.indirizzo,
+        pcrd: park.coords || '',
+        da: dataDa,
+        a: dataA
+      };
 
       const recordInvito = {
         id: 'CR-INV-' + Math.floor(1000 + Math.random() * 9000),
@@ -1286,6 +1338,7 @@
         targa: 'IN ATTESA TARGA',
         nome: 'Invito Inviato',
         azienda: azienda,
+        email: emailCliente,
         parcheggioId: park.id,
         parkNome: park.nome,
         dataDa: dataDa,
@@ -1301,7 +1354,7 @@
       const linkCompleto = `${baseUrl}?invite=${encoded}`;
 
       document.getElementById('output-url-invito-cliente').value = linkCompleto;
-      document.getElementById('label-destinatario-link').innerText = azienda;
+      document.getElementById('label-destinatario-link').innerText = `${azienda} (${emailCliente})`;
       document.getElementById('label-date-link').innerText = `Dal ${dataDa} al ${dataA}`;
       document.getElementById('box-risultato-link-invito').classList.remove('hidden');
       mostraNotifica(`Link generato e salvato nel Registro Pass per ${azienda}!`, "success");
@@ -1314,17 +1367,27 @@
       mostraNotifica("Link copiato negli appunti!", "success");
     }
     function condividiLinkInvitoWhatsApp() {
+      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
+      if (!emailCliente) {
+        mostraNotifica("Inserisci l'Email Cliente prima di inviare il link.", "warning");
+        return;
+      }
       const link = document.getElementById('output-url-invito-cliente').value;
       const azienda = document.getElementById('label-destinatario-link').innerText;
       const msg = `Gentile *${azienda}*,\nEcco il link riservato per generare il vostro Pass Auto con QR Code:\n${link}`;
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     }
     function condividiLinkInvitoEmail() {
+      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
+      if (!emailCliente) {
+        mostraNotifica("Inserisci l'Email Cliente prima di inviare il link.", "warning");
+        return;
+      }
       const link = document.getElementById('output-url-invito-cliente').value;
       const azienda = document.getElementById('label-destinatario-link').innerText;
       const subject = `Invito Registrazione Pass Auto - ${azienda}`;
       const body = `Gentile ${azienda},\n\nClicca sul seguente link riservato per registrare la targa del tuo veicolo e scaricare il QR Pass:\n${link}`;
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = `mailto:${encodeURIComponent(emailCliente)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     function ottieniChiaveTokenInvito(d) {
@@ -1433,6 +1496,8 @@
       const nuovoPassCliente = {
         id: 'CR-' + Math.floor(100000 + Math.random() * 900000),
         inviteTid: d.tid || '',
+        orgEmail: d.orgmail || '',
+        email: d.cmail || '',
         targa: targa,
         nome: nomeConducente,
         azienda: d.az,
@@ -1478,9 +1543,10 @@
       const baseUrl = window.location.href.split('?')[0].split('#')[0];
       const syncToken = codificaPayloadSicuro(p);
       const linkConferma = `${baseUrl}?sync_pass=${syncToken}`;
+      const destinatarioOrg = p.orgEmail || (datiInvitoAttivoCliente && datiInvitoAttivoCliente.orgmail) || '';
       const subject = `Conferma Targa Pass Parcheggio - ${p.targa} (${p.azienda})`;
       const body = `CONFERMA REGISTRAZIONE PASS PARCHEGGIO\n\nAzienda: ${p.azienda}\nTarga: ${p.targa}\nConducente: ${p.nome}\nParcheggio: ${p.parkNome}\nValidità: ${p.dataDa} - ${p.dataA}\n\nClicca sul seguente link per aggiornare automaticamente il Registro Pass Admin:\n${linkConferma}`;
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = `mailto:${encodeURIComponent(destinatarioOrg)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     function scaricaPassClientePDF() {
