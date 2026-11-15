@@ -139,6 +139,15 @@
             <i class="fa-solid fa-image"></i> SALVA IMMAGINE
           </button>
         </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button onclick="inviaConfermaPassAllOrganizzatore()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-brands fa-whatsapp text-base"></i> CONFERMA SU WHATSAPP
+          </button>
+          <button onclick="inviaConfermaPassViaEmailOrganizzatore()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-envelope text-base"></i> CONFERMA VIA EMAIL
+          </button>
+        </div>
       </div>
 
       <div class="text-center text-[11px] text-gray-500 pt-2 pb-6">
@@ -661,113 +670,7 @@
     </div>
   </div>
 
-  <!-- SINCRONIZZAZIONE CLOUD PUBBLICA REAL-TIME (PER GITHUB PAGES & CROSS-DEVICE) -->
-  <script>
-    window._cloudSync = {
-      attivo: true,
-      // Endpoint npoint.io pubblico dedicato per sincronizzazione istantanea ControlRoom
-      endpoint: 'https://api.npoint.io/7b9c4e2d8a1f3c6b5e90',
-      usedTokens: {}
-    };
-
-    async function leggiDatiCloudSicuri() {
-      try {
-        const res = await fetch(window._cloudSync.endpoint + '?_t=' + Date.now(), { cache: 'no-store' });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return (data && typeof data === 'object') ? data : null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    async function scriviDatiCloudSicuri(datiCloud) {
-      try {
-        await fetch(window._cloudSync.endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(datiCloud)
-        });
-      } catch (e) {}
-    }
-
-    async function sincronizzaDaCloudPubblico() {
-      const datiCloud = await leggiDatiCloudSicuri();
-      if (!datiCloud) return;
-
-      let modificato = false;
-      window._cloudSync.usedTokens = datiCloud.usedTokens || {};
-
-      if (Array.isArray(datiCloud.passRegistrati)) {
-        datiCloud.passRegistrati.forEach(pCloud => {
-          if (!pCloud) return;
-          const idx = window.stato.passRegistrati.findIndex(x =>
-            (pCloud.inviteTid && x.inviteTid === pCloud.inviteTid) || x.id === pCloud.id
-          );
-          if (idx >= 0) {
-            if (window.stato.passRegistrati[idx].statoVeicolo === 'INVITATO' && pCloud.statoVeicolo !== 'INVITATO') {
-              window.stato.passRegistrati[idx] = pCloud;
-              modificato = true;
-            }
-          } else if (pCloud.statoVeicolo !== 'INVITATO') {
-            window.stato.passRegistrati.unshift(pCloud);
-            modificato = true;
-          }
-        });
-      }
-
-      if (modificato) {
-        localStorage.setItem(window.STORAGE_KEY, JSON.stringify({
-          config: window.stato.config,
-          parcheggi: window.stato.parcheggi,
-          operatori: window.stato.operatori,
-          passRegistrati: window.stato.passRegistrati,
-          logTransiti: window.stato.logTransiti
-        }));
-        if (typeof window.renderizzaRegistroPassAnagrafica === 'function') {
-          window.renderizzaRegistroPassAnagrafica();
-        }
-      }
-    }
-
-    window.salvaStatoNelCloudPubblico = async function(nuovoPassObj, tokenUsatoId) {
-      let datiCloud = await leggiDatiCloudSicuri();
-      if (!datiCloud) datiCloud = { passRegistrati: [], usedTokens: {} };
-      if (!Array.isArray(datiCloud.passRegistrati)) datiCloud.passRegistrati = [];
-      if (!datiCloud.usedTokens) datiCloud.usedTokens = {};
-
-      // Il token viene marcato come bruciato SOLO quando viene passato un tokenUsatoId valido (al click di generazione)
-      if (tokenUsatoId && nuovoPassObj && nuovoPassObj.statoVeicolo !== 'INVITATO') {
-        datiCloud.usedTokens[tokenUsatoId] = nuovoPassObj;
-      }
-
-      if (nuovoPassObj) {
-        const idx = datiCloud.passRegistrati.findIndex(x =>
-          (nuovoPassObj.inviteTid && x.inviteTid === nuovoPassObj.inviteTid) || x.id === nuovoPassObj.id
-        );
-        if (idx >= 0) datiCloud.passRegistrati[idx] = nuovoPassObj;
-        else datiCloud.passRegistrati.unshift(nuovoPassObj);
-      }
-
-      await scriviDatiCloudSicuri(datiCloud);
-    };
-
-    window.verificaTokenUsatoNelCloud = async function(tokenId) {
-      if (!tokenId) return null;
-      const datiCloud = await leggiDatiCloudSicuri();
-      if (datiCloud && datiCloud.usedTokens && datiCloud.usedTokens[tokenId]) {
-        const salvato = datiCloud.usedTokens[tokenId];
-        if (salvato && salvato.targa && salvato.targa !== 'IN ATTESA TARGA') {
-          return salvato;
-        }
-      }
-      return null;
-    };
-
-    setInterval(sincronizzaDaCloudPubblico, 4000);
-  </script>
-
-  <!-- SCRIPT PRINCIPALE APPLICAZIONE -->
+  <!-- SCRIPT PRINCIPALE APPLICAZIONE (SOLUZIONE 2: 100% AUTONOMA & OFFLINE-READY) -->
   <script>
     const STORAGE_KEY = 'controlroom_rimini_data_v6';
     window.STORAGE_KEY = STORAGE_KEY;
@@ -776,6 +679,7 @@
     let fotocameraInUso = false;
     let passCorrenteGenerato = null;
     let datiInvitoAttivoCliente = null;
+    let ultimoPassClienteGenerato = null;
 
     const statoDefault = {
       appSbloccata: false,
@@ -1250,7 +1154,6 @@
       else stato.passRegistrati.unshift(passObj);
 
       salvaDatiInStorage();
-      if (typeof window.salvaPassNelCloud === 'function') window.salvaPassNelCloud(passObj);
       renderizzaRegistroPassAnagrafica();
 
       passCorrenteGenerato = { ...passObj, parkObj: park };
@@ -1391,7 +1294,6 @@
       };
       stato.passRegistrati.unshift(recordInvito);
       salvaDatiInStorage();
-      if (typeof window.salvaStatoNelCloudPubblico === 'function') window.salvaStatoNelCloudPubblico(recordInvito, null);
       renderizzaRegistroPassAnagrafica();
 
       const encoded = codificaPayloadSicuro(payload);
@@ -1430,8 +1332,37 @@
       return 'cr_invite_used_' + btoa(encodeURIComponent((d.az || '') + '|' + (d.pid || '') + '|' + (d.da || '') + '|' + (d.a || ''))).slice(0, 32);
     }
 
-    async function verificaEApriModalitaInvitoCliente() {
+    function verificaEApriModalitaInvitoCliente() {
       const params = new URLSearchParams(window.location.search);
+
+      // Se l'organizzatore apre un link di conferma pass ricevuto dal cliente (?sync_pass=...)
+      const syncPassToken = params.get('sync_pass');
+      if (syncPassToken) {
+        try {
+          const passRicevuto = decodificaPayloadSicuro(syncPassToken);
+          if (passRicevuto && passRicevuto.targa) {
+            caricaDatiDaStorage();
+            const idxInvito = passRicevuto.inviteTid
+              ? stato.passRegistrati.findIndex(p => p.inviteTid === passRicevuto.inviteTid)
+              : -1;
+            const idxTarga = idxInvito >= 0
+              ? idxInvito
+              : stato.passRegistrati.findIndex(p => p.targa === passRicevuto.targa);
+
+            if (idxTarga >= 0) stato.passRegistrati[idxTarga] = passRicevuto;
+            else stato.passRegistrati.unshift(passRicevuto);
+
+            salvaDatiInStorage();
+            renderizzaRegistroPassAnagrafica();
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => {
+              mostraNotifica(`Pass ${passRicevuto.targa} (${passRicevuto.nome}) sincronizzato nel Registro Pass!`, "success");
+            }, 400);
+          }
+        } catch (e) {}
+        return false;
+      }
+
       const inviteToken = params.get('invite');
       if (!inviteToken) return false;
       try {
@@ -1445,16 +1376,10 @@
         document.getElementById('guest-invite-date').innerText = `Dal ${decoded.da} al ${decoded.a}`;
 
         const storageKey = ottieniChiaveTokenInvito(decoded);
-        let passGiaGenerato = null;
         const passSalvatoRaw = localStorage.getItem(storageKey);
         if (passSalvatoRaw) {
-          passGiaGenerato = JSON.parse(passSalvatoRaw);
-        } else if (decoded.tid && typeof window.verificaTokenUsatoNelCloud === 'function') {
-          passGiaGenerato = await window.verificaTokenUsatoNelCloud(decoded.tid);
-          if (passGiaGenerato) localStorage.setItem(storageKey, JSON.stringify(passGiaGenerato));
-        }
-
-        if (passGiaGenerato) {
+          const passGiaGenerato = JSON.parse(passSalvatoRaw);
+          ultimoPassClienteGenerato = passGiaGenerato;
           document.getElementById('guest-form-container').classList.add('hidden');
           document.getElementById('guest-link-usato-banner').classList.remove('hidden');
           mostraPassClienteSuSchermo(passGiaGenerato);
@@ -1466,6 +1391,7 @@
     }
 
     function mostraPassClienteSuSchermo(passData) {
+      ultimoPassClienteGenerato = passData;
       document.getElementById('guest-badge-azienda').innerText = passData.azienda;
       document.getElementById('guest-badge-id').innerText = `#${passData.id}`;
       document.getElementById('guest-badge-targa').innerText = passData.targa;
@@ -1482,22 +1408,14 @@
       document.getElementById('guest-pass-risultato').classList.remove('hidden');
     }
 
-    async function generaPassSelfServiceCliente() {
+    function generaPassSelfServiceCliente() {
       if (!datiInvitoAttivoCliente) return;
       const d = datiInvitoAttivoCliente;
       const storageKey = ottieniChiaveTokenInvito(d);
 
-      // Controllo doppio (locale + cloud) che il link non sia già stato bruciato
-      let giaUsatoObj = null;
       const giaUsatoRaw = localStorage.getItem(storageKey);
       if (giaUsatoRaw) {
-        giaUsatoObj = JSON.parse(giaUsatoRaw);
-      } else if (d.tid && typeof window.verificaTokenUsatoNelCloud === 'function') {
-        giaUsatoObj = await window.verificaTokenUsatoNelCloud(d.tid);
-      }
-
-      if (giaUsatoObj) {
-        localStorage.setItem(storageKey, JSON.stringify(giaUsatoObj));
+        const giaUsatoObj = JSON.parse(giaUsatoRaw);
         document.getElementById('guest-form-container').classList.add('hidden');
         document.getElementById('guest-link-usato-banner').classList.remove('hidden');
         mostraPassClienteSuSchermo(giaUsatoObj);
@@ -1535,9 +1453,6 @@
       else stato.passRegistrati.unshift(nuovoPassCliente);
 
       salvaDatiInStorage();
-      if (typeof window.salvaStatoNelCloudPubblico === 'function') {
-        await window.salvaStatoNelCloudPubblico(nuovoPassCliente, d.tid || null);
-      }
       renderizzaRegistroPassAnagrafica();
 
       document.getElementById('guest-form-container').classList.add('hidden');
@@ -1545,6 +1460,27 @@
       mostraPassClienteSuSchermo(nuovoPassCliente);
       emettiSuonoFeedback('success');
       mostraNotifica("Pass con QR Code generato! Il link invito è ora disattivato.", "success");
+    }
+
+    function inviaConfermaPassAllOrganizzatore() {
+      if (!ultimoPassClienteGenerato) return;
+      const p = ultimoPassClienteGenerato;
+      const baseUrl = window.location.href.split('?')[0].split('#')[0];
+      const syncToken = codificaPayloadSicuro(p);
+      const linkConferma = `${baseUrl}?sync_pass=${syncToken}`;
+      const msg = `✅ *CONFERMA PASS PARCHEGGIO*\nAzienda: *${p.azienda}*\nTarga: *${p.targa}*\nConducente: ${p.nome}\nParcheggio: ${p.parkNome}\nValidità: ${p.dataDa} - ${p.dataA}\n\nClicca qui per aggiornare il Registro Pass Admin:\n${linkConferma}`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function inviaConfermaPassViaEmailOrganizzatore() {
+      if (!ultimoPassClienteGenerato) return;
+      const p = ultimoPassClienteGenerato;
+      const baseUrl = window.location.href.split('?')[0].split('#')[0];
+      const syncToken = codificaPayloadSicuro(p);
+      const linkConferma = `${baseUrl}?sync_pass=${syncToken}`;
+      const subject = `Conferma Targa Pass Parcheggio - ${p.targa} (${p.azienda})`;
+      const body = `CONFERMA REGISTRAZIONE PASS PARCHEGGIO\n\nAzienda: ${p.azienda}\nTarga: ${p.targa}\nConducente: ${p.nome}\nParcheggio: ${p.parkNome}\nValidità: ${p.dataDa} - ${p.dataA}\n\nClicca sul seguente link per aggiornare automaticamente il Registro Pass Admin:\n${linkConferma}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     function scaricaPassClientePDF() {
@@ -1568,9 +1504,8 @@
 
     function aggiornaRegistroPassManuale() {
       caricaDatiDaStorage();
-      sincronizzaDaCloudPubblico();
       renderizzaRegistroPassAnagrafica();
-      mostraNotifica(`Registro sincronizzato (${stato.passRegistrati.length} pass).`, "success");
+      mostraNotifica(`Registro aggiornato (${stato.passRegistrati.length} pass).`, "success");
     }
 
     function renderizzaTuttoAdmin() {
