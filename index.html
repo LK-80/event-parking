@@ -359,11 +359,11 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cellulare WhatsApp</label>
+              <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cellulare</label>
               <input id="form-pass-telefono" type="tel" placeholder="+39 340 0000000" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm">
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Email</label>
+              <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Email Destinatario</label>
               <input id="form-pass-email" type="email" placeholder="ospite@evento.it" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm">
             </div>
           </div>
@@ -416,10 +416,9 @@
               <button onclick="scaricaPassInPDF()" class="py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold">SCARICA IN PDF</button>
               <button onclick="scaricaPassInPNG()" class="py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold">SCARICA IN PNG</button>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-              <button onclick="inviaPassSuWhatsApp()" class="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold">INVIA WHATSAPP</button>
-              <button onclick="inviaPassPerEmail()" class="py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold">INVIA EMAIL</button>
-            </div>
+            <button onclick="inviaPassPerEmail()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+              <i class="fa-solid fa-envelope"></i> INVIA PASS VIA EMAIL
+            </button>
           </div>
         </div>
       </div>
@@ -517,10 +516,9 @@
               <input id="output-url-invito-cliente" type="text" readonly class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-300 font-mono select-all">
               <button onclick="copiaLinkInvitoNegliAppunti()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold shrink-0">Copia</button>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button onclick="condividiLinkInvitoWhatsApp()" class="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold">Invia Link su WhatsApp</button>
-              <button onclick="condividiLinkInvitoEmail()" class="py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold">Invia Link via Email</button>
-            </div>
+            <button onclick="condividiLinkInvitoEmail()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+              <i class="fa-solid fa-envelope"></i> INVIA LINK VIA EMAIL
+            </button>
           </div>
         </div>
       </div>
@@ -711,7 +709,7 @@
       config: {
         nomeEvento: 'FIERA & PALASPORT',
         emailOrganizzatore: '',
-        pwdGlobaleApp: '12345',
+        pwdGlobaleApp: '',
         pwdMasterVarco: '12345',
         pwdMasterAdmin: '12345',
         pwdMasterBS: '12345'
@@ -770,7 +768,16 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.config) stato.config = { ...statoDefault.config, ...parsed.config };
+          if (parsed.config) {
+            stato.config = {
+              ...statoDefault.config,
+              ...parsed.config,
+              pwdGlobaleApp: parsed.config.pwdGlobaleApp !== undefined ? String(parsed.config.pwdGlobaleApp) : statoDefault.config.pwdGlobaleApp,
+              pwdMasterVarco: parsed.config.pwdMasterVarco !== undefined ? String(parsed.config.pwdMasterVarco) : statoDefault.config.pwdMasterVarco,
+              pwdMasterAdmin: parsed.config.pwdMasterAdmin !== undefined ? String(parsed.config.pwdMasterAdmin) : statoDefault.config.pwdMasterAdmin,
+              pwdMasterBS: parsed.config.pwdMasterBS !== undefined ? String(parsed.config.pwdMasterBS) : statoDefault.config.pwdMasterBS
+            };
+          }
           if (Array.isArray(parsed.parcheggi) && parsed.parcheggi.length > 0) stato.parcheggi = parsed.parcheggi;
           if (Array.isArray(parsed.operatori)) stato.operatori = parsed.operatori;
           if (Array.isArray(parsed.passRegistrati)) stato.passRegistrati = parsed.passRegistrati;
@@ -945,8 +952,10 @@
 
     // VARCO LOGIN & LOGICA
     function apriModalLoginVarco() {
+      caricaDatiDaStorage();
       if (stato.sessioneVarco.autenticato) { cambiaSchedaPrincipale('varco'); return; }
-      if ((stato.config.pwdMasterVarco ?? '12345') === '') {
+      const pwdVarco = String(stato.config.pwdMasterVarco ?? '12345').trim();
+      if (pwdVarco === '') {
         const park = stato.parcheggi[0];
         const varco = park && park.varchi[0] ? park.varchi[0] : null;
         stato.sessioneVarco = { autenticato: true, isMaster: true, operatore: { nome: 'Accesso Diretto' }, parcheggio: park, varco: varco };
@@ -959,6 +968,7 @@
     }
     function chiudiModalLoginVarco() { document.getElementById('modal-login-varco').classList.add('hidden'); }
     function confermaLoginVarcoModal() {
+      caricaDatiDaStorage();
       const pin = document.getElementById('input-login-varco-pin').value.trim();
       const op = stato.operatori.find(o => o.pin === pin);
       if (op) {
@@ -971,7 +981,8 @@
         mostraNotifica(`Benvenuto ${op.nome}!`, 'success');
         return;
       }
-      if (pin === stato.config.pwdMasterVarco) {
+      const pwdVarco = String(stato.config.pwdMasterVarco ?? '12345').trim();
+      if (pwdVarco === '' || pin === pwdVarco) {
         const park = stato.parcheggi[0];
         const varco = park && park.varchi[0] ? park.varchi[0] : null;
         stato.sessioneVarco = { autenticato: true, isMaster: true, operatore: { nome: 'Master Admin' }, parcheggio: park, varco: varco };
@@ -1122,7 +1133,9 @@
 
     // ADMIN & BS LOGIN
     function apriModalLoginAdmin() {
-      if (stato.amministrazioneAutenticata || (stato.config.pwdMasterAdmin ?? '12345') === '') {
+      caricaDatiDaStorage();
+      const pwdAdmin = String(stato.config.pwdMasterAdmin ?? '12345').trim();
+      if (stato.amministrazioneAutenticata || pwdAdmin === '') {
         stato.amministrazioneAutenticata = true;
         cambiaSchedaPrincipale('admin');
         renderizzaTuttoAdmin();
@@ -1133,8 +1146,10 @@
     }
     function chiudiModalLoginAdmin() { document.getElementById('modal-login-admin').classList.add('hidden'); }
     function confermaLoginAdminModal() {
+      caricaDatiDaStorage();
       const pwd = document.getElementById('input-login-admin-pwd').value.trim();
-      if (pwd === (stato.config.pwdMasterAdmin ?? '12345')) {
+      const pwdAdmin = String(stato.config.pwdMasterAdmin ?? '12345').trim();
+      if (pwdAdmin === '' || pwd === pwdAdmin) {
         stato.amministrazioneAutenticata = true;
         chiudiModalLoginAdmin();
         cambiaSchedaPrincipale('admin');
@@ -1145,7 +1160,9 @@
     }
 
     function apriModalLoginBS() {
-      if (stato.bsAutenticato || (stato.config.pwdMasterBS ?? '12345') === '') {
+      caricaDatiDaStorage();
+      const pwdBS = String(stato.config.pwdMasterBS ?? '12345').trim();
+      if (stato.bsAutenticato || pwdBS === '') {
         stato.bsAutenticato = true;
         cambiaSchedaPrincipale('bs');
         popolaCampiPasswordBS();
@@ -1156,8 +1173,11 @@
     }
     function chiudiModalLoginBS() { document.getElementById('modal-login-bs').classList.add('hidden'); }
     function confermaLoginBSModal() {
+      caricaDatiDaStorage();
       const pwd = document.getElementById('input-login-bs-pwd').value.trim();
-      if (pwd === (stato.config.pwdMasterBS ?? '12345') || (stato.config.pwdMasterAdmin && pwd === stato.config.pwdMasterAdmin)) {
+      const pwdBS = String(stato.config.pwdMasterBS ?? '12345').trim();
+      const pwdAdmin = String(stato.config.pwdMasterAdmin ?? '').trim();
+      if (pwdBS === '' || pwd === pwdBS || (pwdAdmin !== '' && pwd === pwdAdmin)) {
         stato.bsAutenticato = true;
         chiudiModalLoginBS();
         cambiaSchedaPrincipale('bs');
@@ -1167,10 +1187,11 @@
       }
     }
     function popolaCampiPasswordBS() {
-      document.getElementById('input-bs-pwd-globale').value = stato.config.pwdGlobaleApp ?? '12345';
-      document.getElementById('input-bs-pwd-varco').value = stato.config.pwdMasterVarco ?? '12345';
-      document.getElementById('input-bs-pwd-admin').value = stato.config.pwdMasterAdmin ?? '12345';
-      document.getElementById('input-bs-pwd-bs').value = stato.config.pwdMasterBS ?? '12345';
+      caricaDatiDaStorage();
+      document.getElementById('input-bs-pwd-globale').value = stato.config.pwdGlobaleApp !== undefined ? stato.config.pwdGlobaleApp : '12345';
+      document.getElementById('input-bs-pwd-varco').value = stato.config.pwdMasterVarco !== undefined ? stato.config.pwdMasterVarco : '12345';
+      document.getElementById('input-bs-pwd-admin').value = stato.config.pwdMasterAdmin !== undefined ? stato.config.pwdMasterAdmin : '12345';
+      document.getElementById('input-bs-pwd-bs').value = stato.config.pwdMasterBS !== undefined ? stato.config.pwdMasterBS : '12345';
     }
     function salvaTutteLePasswordBS() {
       stato.config.pwdGlobaleApp = document.getElementById('input-bs-pwd-globale').value.trim();
@@ -1178,16 +1199,18 @@
       stato.config.pwdMasterAdmin = document.getElementById('input-bs-pwd-admin').value.trim();
       stato.config.pwdMasterBS = document.getElementById('input-bs-pwd-bs').value.trim();
       salvaDatiInStorage();
-      mostraNotifica("Impostazioni password salvate! (I campi vuoti non richiedono password)", "success");
+      popolaCampiPasswordBS();
+      mostraNotifica("Password aggiornate! I campi lasciati vuoti sono ora disattivati.", "success");
     }
     function ripristinaTutteLePassword(valore) {
-      stato.config.pwdGlobaleApp = valore;
-      stato.config.pwdMasterVarco = valore;
-      stato.config.pwdMasterAdmin = valore;
-      stato.config.pwdMasterBS = valore;
+      const val = String(valore ?? '');
+      stato.config.pwdGlobaleApp = val;
+      stato.config.pwdMasterVarco = val;
+      stato.config.pwdMasterAdmin = val;
+      stato.config.pwdMasterBS = val;
       salvaDatiInStorage();
       popolaCampiPasswordBS();
-      mostraNotifica(valore === '' ? "Tutte le password disattivate!" : "Tutte le password reimpostate a 12345!", "success");
+      mostraNotifica(val === '' ? "Tutte le password svuotate e disattivate!" : "Tutte le password reimpostate a 12345!", "success");
     }
 
     // CREAZIONE PASS STANDARD
@@ -1316,9 +1339,14 @@
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     }
     function inviaPassPerEmail() {
-      if (!passCorrenteGenerato) return;
+      if (!passCorrenteGenerato) {
+        mostraNotifica("Genera prima un pass.", "warning");
+        return;
+      }
       const p = passCorrenteGenerato;
-      window.location.href = `mailto:${p.email || ''}?subject=${encodeURIComponent('Pass Parcheggio ' + p.targa)}&body=${encodeURIComponent('Pass veicolo ' + p.targa + ' valido dal ' + p.dataDa + ' al ' + p.dataA)}`;
+      const subject = `Pass Parcheggio Ufficiale - Targa ${p.targa}`;
+      const body = `Gentile ${p.nome},\n\nEcco i dettagli del tuo Pass Parcheggio:\n- Targa: ${p.targa}\n- Parcheggio: ${p.parkObj.nome} (${p.parkObj.indirizzo})\n- Validità: dal ${p.dataDa} al ${p.dataA}\n- Codice Pass: #${p.id}`;
+      window.location.href = `mailto:${p.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     // LINK INVITI CLIENTI & REGISTRO PASS
@@ -1408,12 +1436,6 @@
       input.select();
       document.execCommand('copy');
       mostraNotifica("Link copiato negli appunti!", "success");
-    }
-    function condividiLinkInvitoWhatsApp() {
-      const link = document.getElementById('output-url-invito-cliente').value;
-      const azienda = document.getElementById('label-destinatario-link').innerText;
-      const msg = `Gentile *${azienda}*,\nEcco il link riservato per generare il vostro Pass Auto con QR Code:\n${link}`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     }
     function condividiLinkInvitoEmail() {
       const link = document.getElementById('output-url-invito-cliente').value;
