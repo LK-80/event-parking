@@ -55,7 +55,7 @@
           <i class="fa-solid fa-car-side"></i>
         </div>
         <h2 class="text-xl font-black tracking-wider text-white uppercase">CONTROL ROOM <span class="text-amber-500 text-xs px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">TECNOLOGY</span></h2>
-        <p class="text-xs text-gray-400">Portale Registrazione Veicolo Riservato</p>
+        <p class="text-xs text-gray-400">Portale Registrazione Veicolo Riservato • <span class="text-amber-400 font-semibold">Link Monouso</span></p>
       </div>
 
       <div class="bg-gray-900 border border-amber-500/30 rounded-3xl p-5 space-y-3 shadow-xl">
@@ -484,6 +484,10 @@
               <input id="invito-cliente-nome" type="text" placeholder="Es: Azienda Mario Rossi" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
             </div>
             <div>
+              <label class="block font-bold text-gray-400 uppercase mb-1">Email Cliente (Destinatario) *</label>
+              <input id="invito-cliente-email" type="email" placeholder="cliente@azienda.it" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
+            </div>
+            <div>
               <label class="block font-bold text-gray-400 uppercase mb-1">Targa Veicolo (Opzionale)</label>
               <input id="invito-cliente-targa" type="text" placeholder="Es: AA123BB (oppure compila il cliente)" maxlength="10" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white font-bold uppercase text-sm">
             </div>
@@ -491,14 +495,14 @@
               <label class="block font-bold text-gray-400 uppercase mb-1">Parcheggio Assegnato *</label>
               <select id="invito-cliente-parcheggio" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm"></select>
             </div>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="sm:col-span-2 grid grid-cols-2 gap-2">
               <div>
                 <label class="block font-bold text-gray-400 uppercase mb-1">Valido Dal *</label>
-                <input id="invito-cliente-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+                <input id="invito-cliente-da" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
               </div>
               <div>
                 <label class="block font-bold text-gray-400 uppercase mb-1">Valido Al *</label>
-                <input id="invito-cliente-a" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm">
+                <input id="invito-cliente-a" type="date" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-sm">
               </div>
             </div>
           </div>
@@ -509,7 +513,7 @@
 
           <div id="box-risultato-link-invito" class="hidden bg-gray-950 border border-amber-500/40 rounded-2xl p-4 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-amber-400 uppercase">Pass Confermato & Link Pronto per <span id="label-destinatario-link" class="text-white underline">-</span>:</span>
+              <span class="text-xs font-bold text-amber-400 uppercase">Pass Confermato & Link Pronto per <span id="label-destinatario-link" class="text-white underline">-</span> (<span id="label-email-destinatario-link" class="text-sky-400 font-mono">-</span>):</span>
               <span id="label-date-link" class="text-[11px] font-mono text-emerald-400">-</span>
             </div>
             <div class="flex gap-2">
@@ -1306,13 +1310,62 @@
     }
 
     function esportaElementoInPdfCompleto(el, filename, bgColor) {
-      html2canvas(el, { scale: 2, backgroundColor: bgColor }).then(canvas => {
-        const img = document.createElement('img');
-        img.src = canvas.toDataURL('image/png');
-        img.style.width = '135mm';
-        img.style.margin = '0 auto';
-        html2pdf().set({ margin: 10, filename, image: { type: 'png', quality: 1 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(img).save();
-      });
+      if (!el) return;
+      mostraNotifica("Generazione PDF con QR Code in corso...", "info");
+      setTimeout(() => {
+        html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const wrapper = document.createElement('div');
+          wrapper.style.position = 'fixed';
+          wrapper.style.left = '-9999px';
+          wrapper.style.top = '0';
+          wrapper.style.width = '500px';
+          wrapper.style.backgroundColor = bgColor;
+          wrapper.style.padding = '20px';
+          const img = document.createElement('img');
+          img.src = imgData;
+          img.style.width = '100%';
+          img.style.display = 'block';
+          wrapper.appendChild(img);
+          document.body.appendChild(wrapper);
+
+          html2pdf()
+            .set({
+              margin: 10,
+              filename: filename,
+              image: { type: 'png', quality: 1 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            })
+            .from(wrapper)
+            .save()
+            .then(() => {
+              document.body.removeChild(wrapper);
+              mostraNotifica("PDF scaricato correttamente!", "success");
+            })
+            .catch(() => {
+              if (wrapper.parentNode) document.body.removeChild(wrapper);
+              mostraNotifica("Errore nella creazione del PDF.", "error");
+            });
+        });
+      }, 150);
+    }
+
+    function esportaElementoInPngAffidabile(el, filename, bgColor) {
+      if (!el) return;
+      mostraNotifica("Generazione immagine PNG con QR Code...", "info");
+      setTimeout(() => {
+        html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false }).then(canvas => {
+          const dataUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          mostraNotifica("Immagine PNG scaricata!", "success");
+        });
+      }, 150);
     }
     function esportaElementoInPngAffidabile(el, filename, bgColor) {
       html2canvas(el, { scale: 2, backgroundColor: bgColor }).then(canvas => {
@@ -1375,13 +1428,14 @@
 
     function generaLinkPersonalizzatoCliente() {
       const azienda = document.getElementById('invito-cliente-nome').value.trim();
+      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
       const targaInserita = document.getElementById('invito-cliente-targa').value.trim().toUpperCase();
       const parkId = document.getElementById('invito-cliente-parcheggio').value;
       const dataDa = document.getElementById('invito-cliente-da').value;
       const dataA = document.getElementById('invito-cliente-a').value;
 
-      if (!azienda || !parkId || !dataDa || !dataA) {
-        mostraNotifica("Compila tutti i campi obbligatori (*).", "warning");
+      if (!azienda || !emailCliente || !parkId || !dataDa || !dataA) {
+        mostraNotifica("Compila Nome, Email Cliente, Parcheggio e Date (*).", "warning");
         return;
       }
 
@@ -1395,6 +1449,7 @@
         tid: tokenId,
         pidPass: passId,
         az: azienda,
+        cmail: emailCliente,
         targaPre: targaInserita,
         pid: park.id,
         pnm: park.nome,
@@ -1410,6 +1465,7 @@
         targa: targaRecord,
         nome: azienda,
         azienda: azienda,
+        email: emailCliente,
         parcheggioId: park.id,
         parkNome: park.nome,
         dataDa: dataDa,
@@ -1426,9 +1482,10 @@
 
       document.getElementById('output-url-invito-cliente').value = linkCompleto;
       document.getElementById('label-destinatario-link').innerText = azienda;
+      document.getElementById('label-email-destinatario-link').innerText = emailCliente;
       document.getElementById('label-date-link').innerText = `Dal ${dataDa} al ${dataA}`;
       document.getElementById('box-risultato-link-invito').classList.remove('hidden');
-      mostraNotifica(`Pass confermato automaticamente nel Registro Pass e link generato!`, "success");
+      mostraNotifica(`Pass confermato e link pronto per ${emailCliente}!`, "success");
     }
 
     function copiaLinkInvitoNegliAppunti() {
@@ -1440,9 +1497,10 @@
     function condividiLinkInvitoEmail() {
       const link = document.getElementById('output-url-invito-cliente').value;
       const azienda = document.getElementById('label-destinatario-link').innerText;
+      const emailCliente = document.getElementById('invito-cliente-email').value.trim();
       const subject = `Invito Registrazione Pass Auto - ${azienda}`;
-      const body = `Gentile ${azienda},\n\nClicca sul seguente link riservato per registrare la targa del tuo veicolo e scaricare il QR Pass:\n${link}`;
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      const body = `Gentile ${azienda},\n\nClicca sul seguente link riservato (monouso) per registrare la targa del tuo veicolo e scaricare il QR Pass in PDF:\n${link}`;
+      window.location.href = `mailto:${encodeURIComponent(emailCliente)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
 
     function ottieniChiaveTokenInvito(d) {
@@ -1467,14 +1525,21 @@
           document.getElementById('guest-input-targa').value = decoded.targaPre;
         }
 
+        // Assicura che alla PRIMA apertura venga mostrato solo il form e MAI "Link già usato"
+        document.getElementById('guest-form-container').classList.remove('hidden');
+        document.getElementById('guest-link-usato-banner').classList.add('hidden');
+        document.getElementById('guest-pass-risultato').classList.add('hidden');
+
         const storageKey = ottieniChiaveTokenInvito(decoded);
         const passSalvatoRaw = localStorage.getItem(storageKey);
         if (passSalvatoRaw) {
           const passGiaGenerato = JSON.parse(passSalvatoRaw);
-          ultimoPassClienteGenerato = passGiaGenerato;
-          document.getElementById('guest-form-container').classList.add('hidden');
-          document.getElementById('guest-link-usato-banner').classList.remove('hidden');
-          mostraPassClienteSuSchermo(passGiaGenerato);
+          if (passGiaGenerato && passGiaGenerato.targa) {
+            ultimoPassClienteGenerato = passGiaGenerato;
+            document.getElementById('guest-form-container').classList.add('hidden');
+            document.getElementById('guest-link-usato-banner').classList.remove('hidden');
+            mostraPassClienteSuSchermo(passGiaGenerato);
+          }
         }
         return true;
       } catch (e) {
