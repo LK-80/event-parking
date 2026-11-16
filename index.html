@@ -1033,18 +1033,44 @@
       eseguiVerificaTargaManuale();
     }
     function processaVerificaVarco(rawText) {
+      caricaDatiDaStorage();
       const sv = stato.sessioneVarco;
-      if (!sv.autenticato) { apriModalLoginVarco(); return; }
-      let targa = rawText.trim().toUpperCase();
+      if (!sv.autenticato || !sv.parcheggio || !sv.varco) {
+        const parkDefault = stato.parcheggi[0];
+        const varcoDefault = parkDefault && parkDefault.varchi[0] ? parkDefault.varchi[0] : { id: 'V-DEF', nome: 'Varco Principale', direzione: 'ENTRATA' };
+        stato.sessioneVarco = {
+          autenticato: true,
+          isMaster: true,
+          operatore: { nome: 'Operatore Varco' },
+          parcheggio: parkDefault,
+          varco: varcoDefault
+        };
+        aggiornaInterfacciaVarcoCorrente();
+      }
+      const sessioneAttiva = stato.sessioneVarco;
+      const pulito = rawText.trim();
+      let targa = pulito.replace(/\s+/g, '').toUpperCase();
       let datiQr = null;
+
       try {
-        if (rawText.includes('{')) {
-          datiQr = JSON.parse(rawText);
-          if (datiQr.targa) targa = datiQr.targa.toUpperCase();
+        if (pulito.startsWith('PASS|')) {
+          const parts = pulito.split('|');
+          datiQr = {
+            id: parts[1] || 'QR-PASS',
+            targa: (parts[2] || '').replace(/\s+/g, '').toUpperCase(),
+            nome: parts[3] || 'Ospite',
+            parcheggioId: parts[4] || '',
+            dataDa: parts[5] || '',
+            dataA: parts[6] || ''
+          };
+          if (datiQr.targa) targa = datiQr.targa;
+        } else if (pulito.includes('{')) {
+          datiQr = JSON.parse(pulito);
+          if (datiQr.targa) targa = datiQr.targa.replace(/\s+/g, '').toUpperCase();
         }
       } catch (e) {}
 
-      let pass = stato.passRegistrati.find(p => p.targa === targa);
+      let pass = stato.passRegistrati.find(p => (p.targa || '').replace(/\s+/g, '').toUpperCase() === targa);
       if (!pass && datiQr) {
         pass = {
           id: datiQr.id || 'QR-PASS',
@@ -1061,31 +1087,33 @@
       const boxEsito = document.getElementById('box-esito-controllo');
       if (!pass) {
         emettiSuonoFeedback('error');
-        boxEsito.className = "bg-red-950/70 border-2 border-red-500 rounded-2xl p-6 text-center";
-        boxEsito.innerHTML = `<h2 class="text-2xl font-black text-white">${targa}</h2><p class="text-xs text-red-300 mt-2">ACCESSO NEGATO - Nessun pass autorizzato.</p>`;
-        registraTransitoNelLog(targa, 'Sconosciuto', sv.varco.direzione, sv.varco.nome, 'NEGATO');
+        boxEsito.className = "bg-red-950/70 border-2 border-red-500 rounded-2xl p-6 text-center flex flex-col items-center justify-center";
+        boxEsito.innerHTML = `<div class="text-xs font-black uppercase text-red-400 mb-1">VEICOLO NON AUTORIZZATO</div><h2 class="text-3xl font-black text-white tracking-widest">${targa}</h2><p class="text-xs text-red-300 mt-2">ACCESSO NEGATO - Nessun pass attivo trovato per questa targa.</p>`;
+        registraTransitoNelLog(targa, 'Sconosciuto', sessioneAttiva.varco.direzione, sessioneAttiva.varco.nome, 'NEGATO');
         return;
       }
 
-      const park = sv.parcheggio;
-      if (sv.varco.direzione === 'ENTRATA') {
+      const park = sessioneAttiva.parcheggio;
+      if (sessioneAttiva.varco.direzione === 'ENTRATA') {
         park.presenti++;
         pass.statoVeicolo = 'PRESENTE';
         salvaDatiInStorage();
         aggiornaMonitoraggioParcheggi();
+        renderizzaRegistroPassAnagrafica();
         emettiSuonoFeedback('success');
-        boxEsito.className = "bg-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-6 text-center";
-        boxEsito.innerHTML = `<h2 class="text-3xl font-black text-white">${pass.targa}</h2><p class="text-xs text-emerald-300 mt-2">ACCESSO AUTORIZZATO - ${pass.nome}</p>`;
-        registraTransitoNelLog(pass.targa, pass.nome, 'ENTRATA', sv.varco.nome, 'AUTORIZZATO (+1)');
+        boxEsito.className = "bg-emerald-950/80 border-2 border-emerald-500 rounded-2xl p-6 text-center flex flex-col items-center justify-center";
+        boxEsito.innerHTML = `<div class="text-xs font-black uppercase text-emerald-400 mb-1">PASS VALIDO • INGRESSO</div><h2 class="text-3xl font-black text-white tracking-widest">${pass.targa}</h2><p class="text-sm font-bold text-emerald-300 mt-2">ACCESSO AUTORIZZATO - ${pass.nome}</p><p class="text-[11px] text-gray-300 mt-1">Validità: ${pass.dataDa} / ${pass.dataA}</p>`;
+        registraTransitoNelLog(pass.targa, pass.nome, 'ENTRATA', sessioneAttiva.varco.nome, 'AUTORIZZATO (+1)');
       } else {
         if (park.presenti > 0) park.presenti--;
         pass.statoVeicolo = 'ESTERNO';
         salvaDatiInStorage();
         aggiornaMonitoraggioParcheggi();
+        renderizzaRegistroPassAnagrafica();
         emettiSuonoFeedback('exit');
-        boxEsito.className = "bg-blue-950/80 border-2 border-blue-500 rounded-2xl p-6 text-center";
-        boxEsito.innerHTML = `<h2 class="text-3xl font-black text-white">${pass.targa}</h2><p class="text-xs text-blue-300 mt-2">USCITA REGISTRATA - ${pass.nome}</p>`;
-        registraTransitoNelLog(pass.targa, pass.nome, 'USCITA', sv.varco.nome, 'USCITA (-1)');
+        boxEsito.className = "bg-blue-950/80 border-2 border-blue-500 rounded-2xl p-6 text-center flex flex-col items-center justify-center";
+        boxEsito.innerHTML = `<div class="text-xs font-black uppercase text-blue-400 mb-1">PASS VALIDO • USCITA</div><h2 class="text-3xl font-black text-white tracking-widest">${pass.targa}</h2><p class="text-sm font-bold text-blue-300 mt-2">USCITA REGISTRATA - ${pass.nome}</p>`;
+        registraTransitoNelLog(pass.targa, pass.nome, 'USCITA', sessioneAttiva.varco.nome, 'USCITA (-1)');
       }
     }
 
@@ -1225,12 +1253,6 @@
     }
 
     // CREAZIONE PASS STANDARD
-    function impostaDateDefaultFormPass() {
-      const oggi = new Date().toISOString().split('T')[0];
-      const domani = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-      document.getElementById('form-pass-data-da').value = oggi;
-      document.getElementById('form-pass-data-a').value = domani;
-    }
     function aggiornaSelettoreParcheggiCreaPass() {
       const sel = document.getElementById('form-pass-parcheggio');
       if (!sel) return;
@@ -1238,10 +1260,25 @@
       aggiornaDettagliParcheggioSelezionatoForm();
     }
     function aggiornaDettagliParcheggioSelezionatoForm() {
-      const pId = document.getElementById('form-pass-parcheggio').value;
-      const park = stato.parcheggi.find(p => p.id === pId);
-      if (park) document.getElementById('form-pass-indirizzo-label').innerText = park.indirizzo;
+      const sel = document.getElementById('form-pass-parcheggio');
+      const label = document.getElementById('form-pass-indirizzo-label');
+      if (!sel || !label) return;
+      const park = stato.parcheggi.find(p => p.id === sel.value);
+      label.innerText = park ? park.indirizzo : '-';
     }
+    function impostaDateDefaultFormPass() {
+      const oggi = new Date().toISOString().split('T')[0];
+      const domani = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const daEl = document.getElementById('form-pass-data-da');
+      const aEl = document.getElementById('form-pass-data-a');
+      if (daEl) daEl.value = oggi;
+      if (aEl) aEl.value = domani;
+    }
+    function creaStringaQrCompatta(passObj) {
+      const clean = (v) => String(v || '').replace(/\|/g, ' ').trim();
+      return `PASS|${clean(passObj.id)}|${clean(passObj.targa).toUpperCase()}|${clean(passObj.nome)}|${clean(passObj.parcheggioId)}|${clean(passObj.dataDa)}|${clean(passObj.dataA)}`;
+    }
+
     function eseguiGenerazionePass() {
       const targa = document.getElementById('form-pass-targa').value.trim().toUpperCase();
       const nome = document.getElementById('form-pass-nome').value.trim();
@@ -1284,7 +1321,7 @@
       document.getElementById('link-nav-waze').href = `https://waze.com/ul?q=${q}`;
       document.getElementById('link-nav-apple').href = `https://maps.apple.com/?q=${q}`;
 
-      renderizzaQrCodeAffidabile(document.getElementById('box-visuale-qrcode'), JSON.stringify(passObj), 165);
+      renderizzaQrCodeAffidabile(document.getElementById('box-visuale-qrcode'), creaStringaQrCompatta(passObj), 165);
       mostraNotifica(`Pass per ${targa} salvato nel Registro Pass!`, "success");
     }
 
@@ -1292,7 +1329,14 @@
       if (!containerEl) return;
       containerEl.innerHTML = '';
       const tempDiv = document.createElement('div');
-      new QRCode(tempDiv, { text: payloadText, width: sizePx, height: sizePx, colorDark: "#030712", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+      new QRCode(tempDiv, {
+        text: payloadText,
+        width: 400,
+        height: 400,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
       setTimeout(() => {
         const canvas = tempDiv.querySelector('canvas');
         if (canvas) {
@@ -1301,6 +1345,7 @@
           img.style.width = sizePx + 'px';
           img.style.height = sizePx + 'px';
           img.style.display = 'block';
+          img.style.imageRendering = 'pixelated';
           containerEl.innerHTML = '';
           containerEl.appendChild(img);
         } else {
@@ -1321,7 +1366,7 @@
       mostraNotifica("Generazione PDF con QR Code in corso...", "info");
       setTimeout(() => {
         html2canvas(el, {
-          scale: 2,
+          scale: 3,
           backgroundColor: bgColor || '#111827',
           useCORS: true,
           allowTaint: true,
@@ -1359,7 +1404,7 @@
       mostraNotifica("Generazione immagine PNG con QR Code...", "info");
       setTimeout(() => {
         html2canvas(el, {
-          scale: 2,
+          scale: 3,
           backgroundColor: bgColor || '#111827',
           useCORS: true,
           allowTaint: true,
@@ -1590,7 +1635,7 @@
       document.getElementById('guest-nav-waze').href = `https://waze.com/ul?q=${q}`;
       document.getElementById('guest-nav-apple').href = `https://maps.apple.com/?q=${q}`;
 
-      renderizzaQrCodeAffidabile(document.getElementById('guest-box-qrcode'), JSON.stringify(passData), 155);
+      renderizzaQrCodeAffidabile(document.getElementById('guest-box-qrcode'), creaStringaQrCompatta(passData), 155);
       document.getElementById('guest-pass-risultato').classList.remove('hidden');
     }
 
@@ -1855,6 +1900,15 @@
       aggiornaMonitoraggioParcheggi();
       aggiornaSelettoreParcheggiCreaPass();
       impostaDateDefaultFormPass();
+      const inputTargaManuale = document.getElementById('input-targa-manuale');
+      if (inputTargaManuale) {
+        inputTargaManuale.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            eseguiVerificaTargaManuale();
+          }
+        });
+      }
       renderizzaTabellaLog();
       renderizzaRegistroPassAnagrafica();
       setInterval(() => {
